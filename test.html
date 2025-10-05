@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Lọc sản phẩm</title>
+  <style>
+    .product {
+      border: 1px solid #ddd;
+      padding: 10px;
+      margin: 5px;
+      border-radius: 5px;
+      display: inline-block;
+      width: 150px;
+      text-align: center;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .category-btn {
+      margin: 5px;
+      padding: 8px 15px;
+      background: #b5292f;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .category-btn:hover {
+      background: #8e1f24;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Danh mục</h2>
+  <button class="category-btn" onclick="showCategory('all')">Tất cả</button>
+  <button class="category-btn" onclick="showCategory('chay')">Món chay</button>
+  <button class="category-btn" onclick="showCategory('man')">Món mặn</button>
+
+  <h2>Sản phẩm</h2>
+  <div id="product-list">
+    <div class="product" data-category="chay">Đậu hũ chiên</div>
+    <div class="product" data-category="man">Thịt kho tàu</div>
+    <div class="product" data-category="chay">Rau xào</div>
+    <div class="product" data-category="man">Cá chiên</div>
+    <div class="product" data-category="chay">Canh chay</div>
+  </div>
+
+  <script>
+    function showCategory(category) {
+      let products = document.querySelectorAll(".product");
+      products.forEach(product => {
+        if (category === "all") {
+          product.classList.remove("hidden"); // Hiện tất cả
+        } else {
+          // Nếu product có data-category khớp thì hiện, không thì ẩn
+          if (product.getAttribute("data-category") === category) {
+            product.classList.remove("hidden");
+          } else {
+            product.classList.add("hidden");
+          }
+        }
+      });
+    }
+  </script>
+
+</body>
+</html>

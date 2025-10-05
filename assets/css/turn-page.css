@@ -1,0 +1,34 @@
+:root {
+    --white: #fff;
+    --black: #000;
+    --text-color: #333;
+    --red: #B5292F;
+}
+.page-nav {
+    text-align: center;
+    margin: 20px 0;
+}
+
+.page-nav-list {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.page-nav-item {
+    display: flex;     
+    align-items: center;         
+    justify-content: center; 
+    border: 2px solid var(--black);
+    border-radius: 50%;
+    width: 35px;
+    height: 35px;
+}
+.page-nav-item:hover {
+    background-color: var(--red); 
+    color: white;           
+}
+.page-nav-item a{
+    color: var(--black);
+}
