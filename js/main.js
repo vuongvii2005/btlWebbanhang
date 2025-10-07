@@ -305,3 +305,97 @@ document.addEventListener('DOMContentLoaded', function() {
         renderPagination(0, 0);
     }
 });
+
+// xem chi tiết sản phẩm
+
+// Lấy các element của modal
+const detailModal = document.getElementById('productDetailModal');
+const modalContent = document.getElementById('modalContent');
+const closeModalBtn = document.getElementById('closeModalBtn'); // Nút đóng modal
+
+// Hàm hiển thị chi tiết sản phẩm
+function detailProduct(productId) {
+    // 1. Tìm sản phẩm theo ID
+    const product = productsData.find(p => p.id === productId);
+
+    if (product) {
+        // 2. Định dạng giá tiền
+        const formattedPrice = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(product.price);
+
+        // 3. Tạo nội dung HTML cho modal
+        const modalHtml = `
+            <div class="modal-image-container">
+                <img src="${product.img}" alt="${product.title}">
+                
+            </div>
+            <div class="modal-info">
+                <h2 class="modal-title">${product.title}</h2>
+                <p class="modal-price">${formattedPrice} <span class="unit"></span></p>
+                
+                <div class="modal-quantity">
+                    <button onclick="changeQuantity(-1)">-</button>
+                    <input type="number" id="quantityInput" value="1" min="1" readonly>
+                    <button onclick="changeQuantity(1)">+</button>
+                </div>
+
+                <p class="modal-description">${product.desc}</p>
+
+                <div class="modal-note">
+                    <h4>GHI CHÚ</h4>
+                    <input type="text" placeholder="Nhập thông tin cần lưu ý...">
+                </div>
+
+                <div class="modal-total">
+                    <span class="label">Thành tiền</span>
+                    <span id="modalTotalAmount" class="amount">${formattedPrice}</span>
+                </div>
+
+                <div class="modal-actions">
+                    <button class="add-to-cart-btn"><i class="fa-solid fa-cart-shopping"></i> Đặt hàng ngay</button>
+                    <button class="quick-add-btn"><i class="fa-solid fa-plus"></i></button>
+                </div>
+            </div>
+        `;
+        
+        // 4. Đưa nội dung vào modal và hiển thị
+        modalContent.innerHTML = modalHtml;
+        detailModal.style.display = 'flex'; // Hiển thị modal (sử dụng flex để căn giữa)
+        document.body.style.overflow = 'hidden'; // Ngăn cuộn trang nền
+
+        document.getElementById('quantityInput').dataset.price = product.price; // Lưu giá gốc
+    } else {
+        console.error("Không tìm thấy sản phẩm với ID: " + productId);
+    }
+}
+function closeProductDetailModal() {
+    const detailModal = document.getElementById('productDetailModal'); 
+    detailModal.style.display = 'none';
+    document.body.style.overflow = 'auto'; // Cho phép cuộn trang nền lại
+}
+
+// Logic thay đổi số lượng và cập nhật tổng tiền
+function changeQuantity(change) {
+    const quantityInput = document.getElementById('quantityInput');
+    const totalAmountElement = document.getElementById('modalTotalAmount');
+    
+    let currentQuantity = parseInt(quantityInput.value);
+    const newQuantity = Math.max(1, currentQuantity + change);
+    
+    quantityInput.value = newQuantity;
+    
+    // Cập nhật tổng tiền
+    const price = parseInt(quantityInput.dataset.price);
+    const newTotal = newQuantity * price;
+    
+    totalAmountElement.textContent = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(newTotal);
+}
+// Đóng modal khi click ra ngoài
+window.onclick = function(event) {
+    const detailModal = document.getElementById('productDetailModal'); 
+
+    if (event.target === detailModal) {
+        closeProductDetailModal(); 
+    }
+}
+const modalCloseBtn = document.getElementById('modalCloseBtn');
+modalCloseBtn.onclick = closeProductDetailModal;
