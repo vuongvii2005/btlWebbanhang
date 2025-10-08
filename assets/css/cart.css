@@ -1,0 +1,154 @@
+
+.cart-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: none; /* Sẽ được bật bằng JS */
+    z-index: 999;
+}
+
+/* Khung chính của giỏ hàng */
+.cart-modal {
+    position: fixed;
+    top: 0;
+    right: -400px; /* Ẩn ở bên phải */
+    width: 380px;
+    height: 100%;
+    background-color: #fff;
+    box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    transition: right 0.3s ease-in-out; /* Hiệu ứng trượt */
+    z-index: 1000;
+}
+
+/* Lớp active để hiện giỏ hàng */
+.cart-modal.active {
+    right: 0;
+}
+
+
+/* Phần đầu của giỏ hàng (Tiêu đề và nút đóng) */
+.cart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    border-bottom: 1px solid #eee;
+}
+
+.cart-header h3 {
+    margin: 0;
+    font-size: 1.2rem;
+}
+
+.close-cart-btn {
+    background: none;
+    border: none;
+    font-size: 1.8rem;
+    cursor: pointer;
+    color: #888;
+}
+
+/* Danh sách các sản phẩm trong giỏ hàng */
+.cart-items-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    flex-grow: 1; /* Cho phép danh sách co giãn lấp đầy không gian */
+    overflow-y: auto; /* Tự động có thanh cuộn nếu nhiều sản phẩm */
+}
+
+/* Kiểu cho mỗi sản phẩm trong danh sách */
+.cart-item {
+    display: flex;
+    align-items: center;
+    padding: 15px 20px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+/* --- Đây là phần quan trọng nhất để sửa lỗi ảnh to --- */
+.cart-item img {
+    width: 65px;
+    height: 65px;
+    object-fit: cover; /* Đảm bảo ảnh vừa vặn mà không bị méo */
+    border-radius: 8px;
+    margin-right: 15px;
+}
+
+.item-info {
+    flex-grow: 1; /* Phần thông tin sẽ chiếm hết không gian còn lại */
+}
+
+.item-info .item-title {
+    font-weight: 600;
+    margin: 0 0 5px 0;
+}
+
+.item-info .item-note {
+    font-size: 0.8rem;
+    color: #777;
+    margin: 0;
+}
+
+.item-price {
+    text-align: right;
+}
+
+.item-price p {
+    margin: 0 0 5px 0;
+    font-weight: 600;
+}
+
+.remove-item-btn {
+    background: none;
+    border: none;
+    color: #e74c3c;
+    font-size: 0.8rem;
+    cursor: pointer;
+    padding: 5px;
+}
+
+/* Phần chân của giỏ hàng (Tổng tiền và nút bấm) */
+.cart-footer {
+    padding: 20px;
+    border-top: 1px solid #eee;
+    background-color: #f9f9f9;
+}
+
+.total-section {
+    display: flex;
+    justify-content: space-between;
+    font-size: 1.1rem;
+    font-weight: bold;
+    margin-bottom: 15px;
+}
+
+.cart-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px; /* Khoảng cách giữa 2 nút */
+}
+
+.cart-actions button {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #c0392b;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.continue-shopping-btn {
+    background-color: #fff;
+    color: #c0392b;
+}
+
+.checkout-btn {
+    background-color: #c0392b;
+    color: #fff;
+}

@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="assets/css/admin.css">
     <link rel="stylesheet" href="assets/css/footer.css">
     <link rel="stylesheet" href="assets/css/product.css">
+    <link rel="stylesheet" href="assets/css/cart.css">
 </head>
 
 <body>
@@ -48,12 +49,15 @@
                                 </li>
                             </ul>
                         <li class="main-menu-gh">
-                            <div class="cart-icon">
+                            <div class="cart-icon" id="openCartBtn">
                                 <i class="fa-light fa-basket-shopping"></i>
                                 <span class="count-product-cart">0</span>
                             </div>
-                            <span class="cart-text">Giỏ hàng</span>
+                            <span class="cart-text" style="cursor: pointer" onclick="openCartModal()">Giỏ hàng</span>
                         </li>
+
+                        <div id="cartModal" class="cart-modal">
+                        </div>
                     </ul>
                 </div>
 
@@ -211,7 +215,7 @@
         </div>
         <div id="productDetailModal" class="product-modal">
             <button id="modalCloseBtn" class="close-btn" onclick="closeProductDetailModal()">
-                    <i class="fa-solid fa-xmark"></i>
+                <i class="fa-solid fa-xmark"></i>
             </button>
             <div class="modal-dialog">
                 <div id="modalContent" class="modal-content">
@@ -335,6 +339,7 @@
     </footer>
     <script src="js/main.js"></script>
     <script src="js/product.js"></script>
+    <script src="js/cart.js"></script>
 </body>
 
 </html>

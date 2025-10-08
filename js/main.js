@@ -193,27 +193,27 @@ if (mainMenuLogin && dropdownMenu) {
     dropdownMenu.addEventListener('mouseleave', () => dropdownMenu.style.display = 'none');
 }
 
-switchToLogin();
 
 
 
-const PRODUCTS_PER_PAGE = 12; 
+
+const PRODUCTS_PER_PAGE = 12;
 let currentPage = 1;
-const productsContainer = document.querySelector('.product-list'); 
+const productsContainer = document.querySelector('.product-list');
 const paginationList = document.querySelector('.page-nav-list');
 const homeTitleElement = document.getElementById("home-title");
 
 
 function renderProducts(productsData) {
     let productHtml = '';
-    
+
     if (productsData.length === 0) {
         if (homeTitleElement) homeTitleElement.style.display = "none";
         // Nội dung khi không có kết quả
         productHtml = `<div class="no-result"><div class="no-result-h">Tìm kiếm không có kết quả</div><div class="no-result-p">Xin lỗi, chúng tôi không thể tìm được kết quả hợp với tìm kiếm của bạn</div><div class="no-result-i"><i class="fa-light fa-face-sad-cry"></i></div></div>`;
     } else {
         if (homeTitleElement) homeTitleElement.style.display = "block";
-        
+
         productsData.forEach((product) => {
             productHtml += `
             <div class="product-card">
@@ -236,15 +236,15 @@ function renderProducts(productsData) {
 
 
 function renderPagination(totalProducts, totalPages) {
-    if (!paginationList) return; 
+    if (!paginationList) return;
 
     if (totalPages <= 1) {
-        paginationList.innerHTML = ''; 
+        paginationList.innerHTML = '';
         return;
     }
 
     let paginationHtml = '';
-    
+
     // Nút "Trang Trước" (<)
     paginationHtml += `<li class="page-nav-item ${currentPage === 1 ? 'disabled' : ''}">
         <a href="#" onclick="event.preventDefault(); changePage(${currentPage - 1})"><i class="fa-solid fa-angle-left"></i></a>
@@ -271,29 +271,29 @@ function changePage(newPage) {
     const totalPages = Math.ceil(totalProducts / PRODUCTS_PER_PAGE);
 
     if (newPage < 1 || newPage > totalPages) {
-        return; 
+        return;
     }
 
     // 1. Cập nhật trạng thái trang
     currentPage = newPage;
-    
+
     // 2. Tính toán vị trí và lấy dữ liệu
     const startIndex = (currentPage - 1) * PRODUCTS_PER_PAGE;
     const endIndex = startIndex + PRODUCTS_PER_PAGE;
     const productsToShow = productsData.slice(startIndex, endIndex);
 
     // 3. Render
-    renderProducts(productsToShow); 
+    renderProducts(productsToShow);
     renderPagination(totalProducts, totalPages);
-    
+
     // 4. (Tùy chọn) Cuộn lên đầu phần sản phẩm
     if (homeTitleElement) {
-         window.scrollTo({ top: homeTitleElement.offsetTop - 50, behavior: 'smooth' });
+        window.scrollTo({ top: homeTitleElement.offsetTop - 50, behavior: 'smooth' });
     }
 }
 
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     // Đảm bảo productsData đã được tải trước đây
     if (typeof productsData !== 'undefined' && productsData.length > 0) {
         // Hiển thị trang đầu tiên khi trang tải xong
@@ -330,12 +330,13 @@ function detailProduct(productId) {
             </div>
             <div class="modal-info">
                 <h2 class="modal-title">${product.title}</h2>
-                <p class="modal-price">${formattedPrice} <span class="unit"></span></p>
-                
-                <div class="modal-quantity">
-                    <button onclick="changeQuantity(-1)">-</button>
-                    <input type="number" id="quantityInput" value="1" min="1" readonly>
-                    <button onclick="changeQuantity(1)">+</button>
+                <div class="modal-info-bao">
+                    <p class="modal-price">${formattedPrice} <span class="unit"></span></p>
+                    <div class="modal-quantity">
+                        <button onclick="changeQuantity(-1)">-</button>
+                        <input type="number" id="quantityInput" value="1" min="1" readonly>
+                        <button onclick="changeQuantity(1)">+</button>
+                    </div>
                 </div>
 
                 <p class="modal-description">${product.desc}</p>
@@ -352,11 +353,11 @@ function detailProduct(productId) {
 
                 <div class="modal-actions">
                     <button class="add-to-cart-btn"><i class="fa-solid fa-cart-shopping"></i> Đặt hàng ngay</button>
-                    <button class="quick-add-btn"><i class="fa-solid fa-plus"></i></button>
+                    <button class="quick-add-btn" onclick="addToCart(${product.id})"><i class="fa-light fa-basket-shopping"></i></button>
                 </div>
             </div>
         `;
-        
+
         // 4. Đưa nội dung vào modal và hiển thị
         modalContent.innerHTML = modalHtml;
         detailModal.style.display = 'flex'; // Hiển thị modal (sử dụng flex để căn giữa)
@@ -368,7 +369,7 @@ function detailProduct(productId) {
     }
 }
 function closeProductDetailModal() {
-    const detailModal = document.getElementById('productDetailModal'); 
+    const detailModal = document.getElementById('productDetailModal');
     detailModal.style.display = 'none';
     document.body.style.overflow = 'auto'; // Cho phép cuộn trang nền lại
 }
@@ -377,24 +378,24 @@ function closeProductDetailModal() {
 function changeQuantity(change) {
     const quantityInput = document.getElementById('quantityInput');
     const totalAmountElement = document.getElementById('modalTotalAmount');
-    
+
     let currentQuantity = parseInt(quantityInput.value);
     const newQuantity = Math.max(1, currentQuantity + change);
-    
+
     quantityInput.value = newQuantity;
-    
+
     // Cập nhật tổng tiền
     const price = parseInt(quantityInput.dataset.price);
     const newTotal = newQuantity * price;
-    
+
     totalAmountElement.textContent = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(newTotal);
 }
 // Đóng modal khi click ra ngoài
-window.onclick = function(event) {
-    const detailModal = document.getElementById('productDetailModal'); 
+window.onclick = function (event) {
+    const detailModal = document.getElementById('productDetailModal');
 
     if (event.target === detailModal) {
-        closeProductDetailModal(); 
+        closeProductDetailModal();
     }
 }
 const modalCloseBtn = document.getElementById('modalCloseBtn');
