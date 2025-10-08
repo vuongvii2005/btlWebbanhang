@@ -1,4 +1,4 @@
-/* Màu sắc chính */
+
 :root {
     --primary-red: #C73C44;
     --dark-red: #a83238;
@@ -8,7 +8,7 @@
     --modal-bg: #fff;
 }
 
-/* Modal Overlay */
+
 .modal.signup-login {
     position: fixed;
     top: 0;
@@ -30,13 +30,12 @@
     opacity: 1;
 }
 
-/* Modal Container (Phần nội dung chính) */
 .modal-container {
     background-color: var(--modal-bg);
     padding: 2rem; 
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-    max-width: 400px; /* Giữ kích thước nhỏ gọn */
+    max-width: 400px; 
     width: 90%; 
     position: relative;
 }

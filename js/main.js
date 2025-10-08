@@ -11,7 +11,7 @@ const signupForm = document.querySelector('.signup-form');
 const loginForm = document.querySelector('.login-form');
 
 let userDatabase = [
-    { phone: '0901234567', password: 'password123', fullname: 'Người Dùng Mẫu' }
+    { phone: '0901234567', password: 'admin123', fullname: 'vuongvi' }
 ];
 
 function displayError(el, msg, msgClass) {
@@ -100,21 +100,23 @@ function validateSignupForm() {
 
 function validateLoginForm() {
     let valid = true;
-    const phone = loginForm.querySelector('#phone-login');
+    const loginInput = loginForm.querySelector('#phone-login'); // Đổi tên để dễ hiểu hơn
     const pass = loginForm.querySelector('#password-login');
     const msg = document.querySelector('.form-message-check-login');
-    const phoneRegex = /^\d{10,11}$/;
 
-    clearError(phone, '.form-message-login-phone');
+    clearError(loginInput, '.form-message-login-phone');
     clearError(pass, '.form-message-check-login');
     msg.textContent = '';
 
-    if (!phoneRegex.test(phone.value.trim())) {
-        displayError(phone, 'Vui lòng nhập số điện thoại hợp lệ', '.form-message-login-phone');
+    const inputValue = loginInput.value.trim();
+    const passwordValue = pass.value.trim();
+
+    if (!inputValue) {
+        displayError(loginInput, 'Vui lòng nhập họ tên hoặc số điện thoại', '.form-message-login-phone');
         valid = false;
     }
 
-    if (!pass.value.trim()) {
+    if (!passwordValue) {
         msg.textContent = 'Vui lòng nhập mật khẩu';
         pass.classList.add('is-invalid');
         valid = false;
@@ -122,11 +124,16 @@ function validateLoginForm() {
 
     if (!valid) return false;
 
-    const user = userDatabase.find(u => u.phone === phone.value.trim() && u.password === pass.value);
+    // Tìm kiếm người dùng bằng cả họ tên HOẶC số điện thoại, và mật khẩu phải khớp
+    const user = userDatabase.find(u => 
+        (u.fullname.toLowerCase() === inputValue.toLowerCase() || u.phone === inputValue) && 
+        u.password === passwordValue
+    );
+
     if (!user) {
-        phone.classList.add('is-invalid');
+        loginInput.classList.add('is-invalid');
         pass.classList.add('is-invalid');
-        msg.textContent = 'Số điện thoại hoặc mật khẩu không đúng.';
+        msg.textContent = 'Thông tin đăng nhập hoặc mật khẩu không đúng.';
         return false;
     }
     return true;
@@ -274,7 +281,7 @@ function changePage(newPage) {
         return;
     }
 
-    // 1. Cập nhật trạng thái trang
+    // Cập nhật trạng thái trang
     currentPage = newPage;
 
     // 2. Tính toán vị trí và lấy dữ liệu
@@ -282,11 +289,11 @@ function changePage(newPage) {
     const endIndex = startIndex + PRODUCTS_PER_PAGE;
     const productsToShow = productsData.slice(startIndex, endIndex);
 
-    // 3. Render
+    // Render
     renderProducts(productsToShow);
     renderPagination(totalProducts, totalPages);
 
-    // 4. (Tùy chọn) Cuộn lên đầu phần sản phẩm
+    // Cuộn lên đầu phần sản phẩm
     if (homeTitleElement) {
         window.scrollTo({ top: homeTitleElement.offsetTop - 50, behavior: 'smooth' });
     }
@@ -352,7 +359,7 @@ function detailProduct(productId) {
                 </div>
 
                 <div class="modal-actions">
-                    <button class="add-to-cart-btn"><i class="fa-solid fa-cart-shopping"></i> Đặt hàng ngay</button>
+                    <button class="add-to-cart-btn" onclick="buyNow(${product.id})"><i class="fa-solid fa-cart-shopping"></i> Đặt hàng ngay</button>
                     <button class="quick-add-btn" onclick="addToCart(${product.id})"><i class="fa-light fa-basket-shopping"></i></button>
                 </div>
             </div>
@@ -400,3 +407,48 @@ window.onclick = function (event) {
 }
 const modalCloseBtn = document.getElementById('modalCloseBtn');
 modalCloseBtn.onclick = closeProductDetailModal;
+
+function goToCheckout() {
+    if (cart.length === 0) {
+        alert("Giỏ hàng của bạn đang trống!");
+        return; 
+    }
+    // Lưu giỏ hàng vào localStorage
+    localStorage.setItem('shoppingCart', JSON.stringify(cart));
+    // Chuyển sang trang checkout.html
+    window.location.href = 'checkout.html';
+
+}
+
+function buyNow(productId) {
+    // 1. Lấy thông tin số lượng và ghi chú từ modal chi tiết
+    const quantityInput = document.getElementById('quantityInput');
+    const noteInput = document.getElementById('noteInput');
+    const quantity = quantityInput ? parseInt(quantityInput.value) : 1;
+    const note = noteInput ? noteInput.value.trim() : '';
+    // 2. Tìm thông tin sản phẩm
+    const product = productsData.find(p => p.id === productId);
+    if (!product) {
+        alert("Không tìm thấy sản phẩm!");
+        return;
+    }
+    // 3. Tạo một giỏ hàng tạm thời CHỈ chứa sản phẩm này
+    const singleItemCart = [{
+        id: product.id,
+        title: product.title,
+        price: product.price,
+        img: product.img,
+        quantity: quantity,
+        note: note
+    }];
+    // 4. Lưu giỏ hàng tạm thời này vào localStorage (sử dụng cùng key với giỏ hàng chính)
+    localStorage.setItem('shoppingCart', JSON.stringify(singleItemCart));
+    // 5. Chuyển người dùng đến trang thanh toán
+    window.location.href = 'checkout.html';
+}
+
+function showCategory(categoryName) {
+    console.log("Đang lọc theo danh mục:", categoryName);
+    const filteredProducts = productsData.filter(product => product.category === categoryName);
+    renderProducts(filteredProducts);
+}

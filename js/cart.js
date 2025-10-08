@@ -81,7 +81,7 @@ function renderCart() {
             </div>
             <div class="cart-actions">
                 <button class="continue-shopping-btn" onclick="closeCartModal()">+ Thêm món</button>
-                <button class="checkout-btn">Thanh toán</button>
+                <button class="checkout-btn" onclick="goToCheckout()">Thanh toán</button>
             </div>
         </div>
     `;

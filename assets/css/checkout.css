@@ -1,0 +1,123 @@
+:root {
+    --white: #fff;
+    --black: #000;
+    --text-color: #333;
+    --red: #B5292F;
+}
+
+body {
+    background-color: #f8f9fa;
+}
+
+.checkout-container {
+    display: flex;
+    max-width: 1200px;
+    margin: 40px auto;
+    gap: 30px;
+    font-family: Arial, sans-serif;
+}
+
+.checkout-main {
+    flex: 2;
+    background-color: #fff;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.checkout-sidebar {
+    flex: 1;
+}
+
+.back-link {
+    text-decoration: none;
+    color: #555;
+    margin-bottom: 20px;
+    display: inline-block;
+}
+
+.checkout-section {
+    margin-bottom: 30px;
+}
+.checkout-section h2 {
+    font-size: 1rem;
+    color: #888;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+
+.option-group {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+.option-btn {
+    flex: 1;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: #f8f9fa;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+}
+.option-btn:hover {
+    border-color: #c0392b;
+}
+.option-btn.active {
+    border-color: var(--red);
+    background-color: #fdedec;
+    color: var(--red);
+    font-weight: bold;
+}
+
+.radio-group label, .checkout-section input[type="text"], .checkout-section input[type="tel"], .checkout-section textarea {
+    display: block;
+    width: 100%;
+    margin-bottom: 15px;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+}
+
+.order-summary {
+    background-color: #fff;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+.order-summary h2 {
+    margin-top: 0;
+}
+.summary-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+    margin: 15px 0;
+}
+.summary-row.total {
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+.place-order-btn {
+    width: 100%;
+    padding: 15px;
+    background-color: #c0392b;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    cursor: pointer;
+}
+.terms {
+    font-size: 0.8rem;
+    color: #888;
+    text-align: center;
+    margin-top: 15px;
+}

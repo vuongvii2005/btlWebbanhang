@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-g">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thanh toán - Vy Food</title>
+    <link rel="stylesheet" href="assets/css/checkout.css">
+   <link rel="stylesheet" href="./assets/font/font-awesome-pro-v6-6.2.0/css/all.min.css" />
+</head>
+<body>
+
+    <div class="checkout-container">
+        <div class="checkout-main">
+            <a href="index.html" class="back-link"><i class="fas fa-arrow-left"></i> Quay lại</a>
+            <h1>Thanh toán</h1>
+
+            <div class="checkout-section">
+                <h2>THÔNG TIN ĐƠN HÀNG</h2>
+                <p>Hình thức giao nhận</p>
+                <div class="option-group">
+                    <button class="option-btn active" id="btn-delivery"><i class="fas fa-truck"></i> Giao tận nơi</button>
+                    <button class="option-btn" id="btn-pickup"><i class="fas fa-store"></i> Tự đến lấy</button>
+                </div>
+
+                <p>Ngày giao hàng</p>
+                <div class="option-group">
+                    <button class="option-btn active" id="date-today">Hôm nay</button>
+                    <button class="option-btn" id="date-tomorrow">Ngày mai</button>
+                    <button class="option-btn" id="date-day-after">Ngày kia</button>
+                </div>
+
+                <p>Thời gian giao hàng</p>
+                <div class="radio-group">
+                    <label><input type="radio" name="delivery-time" value="asap" checked> Giao ngay khi xong</label>
+                    <label><input type="radio" name="delivery-time" value="timed"> Giao vào giờ <input type="time" id="specific-time" value="08:00"></label>
+                </div>
+                
+                <p>Ghi chú đơn hàng</p>
+                <textarea id="order-notes" placeholder="Nhập ghi chú..."></textarea>
+            </div>
+
+            <div class="checkout-section">
+                <h2>THÔNG TIN NGƯỜI NHẬN</h2>
+                <input type="text" id="customer-name" placeholder="Tên người nhận">
+                <input type="tel" id="customer-phone" placeholder="Số điện thoại">
+                <input type="text" id="customer-address" placeholder="Địa chỉ giao hàng">
+            </div>
+        </div>
+
+        <div class="checkout-sidebar">
+            <div class="order-summary">
+                <h2>Đơn hàng</h2>
+                <div id="summary-items">
+                    </div>
+                <div class="summary-row">
+                    <span>Tiền hàng</span>
+                    <span id="summary-subtotal">0 ₫</span>
+                </div>
+                <div class="summary-row" id="shipping-fee-row">
+                    <span>Phí vận chuyển</span>
+                    <span id="summary-shipping">30.000 ₫</span>
+                </div>
+                <hr>
+                <div class="summary-row total">
+                    <span>Tổng cộng</span>
+                    <span id="summary-total">0 ₫</span>
+                </div>
+                <button class="place-order-btn" onclick="placeOrder()">Đặt hàng</button>
+                <p class="terms">Bằng việc bấm vào nút "Đặt hàng", bạn đồng ý với chính sách hoạt động của chúng tôi.</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/checkout.js"></script> 
+</body>
+</html>
