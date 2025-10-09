@@ -369,3 +369,16 @@ a {
     width: calc(100% - 70px);/*rộng bằng 100% của thẻ cha trừ đi 70px.*/
     align-self: center; /* Căn giữa nút */
 }
+
+.cart-text-group {
+    display: flex;
+    flex-direction: column;
+    padding-left: 7px;
+}
+
+.history-link {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--black);
+    margin-top: 4px;
+}
