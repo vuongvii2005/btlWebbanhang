@@ -451,4 +451,9 @@ function showCategory(categoryName) {
     console.log("Đang lọc theo danh mục:", categoryName);
     const filteredProducts = productsData.filter(product => product.category === categoryName);
     renderProducts(filteredProducts);
+    const productsSection = document.querySelector('.product-list');
+    if (productsSection) {
+        // Cuộn 
+        productsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
 }

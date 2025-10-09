@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý Cửa hàng - Vy Food</title>
+    <link rel="stylesheet" href="./assets/font/font-awesome-pro-v6-6.2.0/css/all.min.css" /> 
+    <link rel="stylesheet" href="assets/css/dashboard.css">  
+</head>
+<body>
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="assets/img/favicon.png" alt="Vy Food Logo"> <h3>VY FOOD</h3>
+            </div>
+            <ul class="sidebar-nav">
+                <li><a href="#" class="nav-link active" data-target="overview-section"><i class="fa-solid fa-chart-pie"></i> Trang tổng quan</a></li>
+                <li><a href="#" class="nav-link" data-target="products-section"><i class="fa-solid fa-burger"></i> Sản phẩm</a></li>
+                <li><a href="#" class="nav-link" data-target="customers-section"><i class="fa-solid fa-users"></i> Khách hàng</a></li>
+                <li><a href="#" class="nav-link" data-target="orders-section"><i class="fa-solid fa-receipt"></i> Đơn hàng</a></li>
+            </ul>
+            <div class="sidebar-footer">
+                <ul class="sidebar-nav">
+                    <li><a href="index.html"><i class="fa-solid fa-house"></i> Trang chủ</a></li>
+                    <li><a href="index.html"><i class="fa-solid fa-right-from-bracket"></i> Đăng xuất</a></li>
+                </ul>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <section id="overview-section" class="content-section active">
+                <header class="main-header">TRANG TỔNG QUÁT CỦA CỬA HÀNG VY FOOD</header>
+                <p>Nội dung trang tổng quát ở đây</p>
+            </section>
+
+            <section id="products-section" class="content-section">
+                <header class="main-header">QUẢN LÝ SẢN PHẨM</header>
+                <table class="product-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Tên sản phẩm</th>
+                            <th>Giá</th>
+                            <th>Danh mục</th>
+                            <th>Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                       
+                    </tbody>
+                </table>
+            </section>
+
+            <section id="customers-section" class="content-section">
+                <header class="main-header">QUẢN LÝ KHÁCH HÀNG</header>
+                <p>Nội dung trang quản lý khách hàng sẽ ở đây...</p>
+            </section>
+
+            <section id="orders-section" class="content-section">
+                <header class="main-header">QUẢN LÝ ĐƠN HÀNG</header>
+                <p>Nội dung trang quản lý đơn hàng sẽ ở đây...</p>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        // Lấy tất cả các link trong menu và các section nội dung
+        const navLinks = document.querySelectorAll('.nav-link');
+        const contentSections = document.querySelectorAll('.content-section');
+
+        // Gắn sự kiện click cho mỗi link trong menu
+        navLinks.forEach(link => {
+            link.addEventListener('click', function(event) {
+                event.preventDefault(); // Ngăn link tải lại trang
+
+                // Lấy ID của section mục tiêu từ thuộc tính 'data-target'
+                const targetId = this.getAttribute('data-target');
+                const targetSection = document.getElementById(targetId);
+
+                // Xóa class 'active' khỏi tất cả các link và section
+                navLinks.forEach(l => l.classList.remove('active'));
+                contentSections.forEach(s => s.classList.remove('active'));
+
+                // Thêm class 'active' cho link vừa click và section tương ứng
+                this.classList.add('active');
+                if (targetSection) {
+                    targetSection.classList.add('active');
+                }
+            });
+        });
+       
+
+    </script>
+</body>
+</html>
