@@ -1,3 +1,35 @@
+// 🔌 API Configuration
+const API_URL = 'http://localhost/btlWebbanhang/api/index.php';
+
+// 📡 API Helper Function
+async function apiCall(controller, action, data = null, method = 'GET', token = null) {
+    let url = `${API_URL}?controller=${controller}&action=${action}`;
+    
+    const options = {
+        method: method,
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    };
+    
+    if (token) {
+        options.headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    if (data && (method === 'POST' || method === 'PUT')) {
+        options.body = JSON.stringify(data);
+    }
+    
+    const response = await fetch(url, options);
+    const result = await response.json();
+    
+    if (!result.success) {
+        throw new Error(result.message || 'API Error');
+    }
+    
+    return result.data;
+}
+
 // Chờ trang tải xong rồi mới chạy code
 window.onload = function() {
     const cartDataString = localStorage.getItem('shoppingCart');
@@ -89,24 +121,54 @@ function placeOrder() {
         return;
     }
 
-    // Lấy dữ liệu giỏ hàng một lần nữa để đảm bảo
-    const cart = JSON.parse(localStorage.getItem('shoppingCart'));
+    // Check if user is logged in
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+        alert('Bạn cần đăng nhập để đặt hàng!');
+        window.location.href = 'index.html';
+        return;
+    }
 
-    const finalOrder = {
-        customer: {
-            name: customerName,
-            phone: customerPhone,
-            address: customerAddress
-        },
-        items: cart,
-        notes: document.getElementById('order-notes').value,
-        total: document.getElementById('summary-total').innerText
-    };
-    
-    console.log("ĐƠN HÀNG CUỐI CÙNG:", finalOrder);
-    alert(`Cảm ơn ${customerName} đã đặt hàng! Chúng tôi sẽ liên hệ với bạn sớm.`);
-    
-    // xóa giỏ hàng và quay về trang chủ
-    localStorage.removeItem('shoppingCart');
-    window.location.href = 'index.html';
+    // 🔌 Call API to create order
+    (async () => {
+        try {
+            const cart = JSON.parse(localStorage.getItem('shoppingCart'));
+            
+            // Get delivery settings
+            const btnDelivery = document.getElementById('btn-delivery');
+            const shippingFee = btnDelivery.classList.contains('active') ? 30000 : 0;
+            
+            const deliveryDate = document.getElementById('date-today').classList.contains('active') 
+                ? new Date().toISOString().split('T')[0]
+                : null;
+
+            // Calculate total
+            let subtotal = 0;
+            cart.forEach(item => {
+                subtotal += item.price * item.quantity;
+            });
+            const totalAmount = subtotal + shippingFee;
+
+            const order = await apiCall('orders', 'create', {
+                customer_name: customerName,
+                phone: customerPhone,
+                address: customerAddress,
+                delivery_type: btnDelivery.classList.contains('active') ? 'delivery' : 'pickup',
+                delivery_date: deliveryDate,
+                total_amount: totalAmount,
+                shipping_fee: shippingFee,
+                items: cart,
+                notes: document.getElementById('order-notes')?.value || ''
+            }, 'POST', token);
+            
+            alert(`Cảm ơn ${customerName} đã đặt hàng! Mã đơn: ${order.order_id}`);
+            
+            // Clear cart and redirect
+            localStorage.removeItem('shoppingCart');
+            window.location.href = 'index.html';
+            
+        } catch (error) {
+            alert('Lỗi: ' + error.message);
+        }
+    })();
 }

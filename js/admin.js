@@ -1,8 +1,9 @@
 
 const adminAccount = {
-    username: 'admin',
-    password: 'admin123'
+    username: '',
+    password: ''
 };
+
 const adminForm = document.getElementById('admin-login-form');
 if (adminForm) {
     adminForm.addEventListener('submit', function(event) {

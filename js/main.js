@@ -1,204 +1,37 @@
-const loginModal = document.querySelector('.modal.signup-login');
-const loginLinks = document.querySelectorAll('#login');
-const signupLinks = document.querySelectorAll('#signup, .signup-link');
-const closeButton = document.querySelector('.form-close');
-const loginFormContainer = document.querySelector('.form-content.login');
-const signupFormContainer = document.querySelector('.form-content.sign-up');
-const loginSwitchLink = document.querySelector('.login-link');
-const mainMenuLogin = document.querySelector('.main-menu-login');
-const dropdownMenu = document.querySelector('.header-middle-right-menu');
-const signupForm = document.querySelector('.signup-form');
-const loginForm = document.querySelector('.login-form');
+// 🔌 API Configuration
+const API_URL = 'http://localhost/btlWebbanhang/api/index.php';
 
-let userDatabase = [
-    { phone: '0901234567', password: 'admin123', fullname: 'vuongvi' }
-];
-
-function displayError(el, msg, msgClass) {
-    const msgEl = document.querySelector(msgClass);
-    if (msgEl) msgEl.textContent = msg;
-    if (el) el.classList.add('is-invalid');
-}
-
-function clearError(el, msgClass) {
-    const msgEl = document.querySelector(msgClass);
-    if (msgEl) msgEl.textContent = '';
-    if (el) el.classList.remove('is-invalid');
-}
-
-function clearAllErrors() {
-    document.querySelectorAll('.form-control').forEach(i => i.classList.remove('is-invalid'));
-    document.querySelectorAll('.form-message').forEach(s => s.textContent = '');
-    const checkbox = signupForm?.querySelector('#checkbox-signup');
-    if (checkbox) checkbox.checked = false;
-}
-
-function setupPasswordToggles() {
-    document.querySelectorAll('.password-toggle').forEach(button => {
-        button.addEventListener('click', () => {
-            const input = button.previousElementSibling;
-            const icon = button.querySelector('i');
-            const isHidden = input.type === 'password';
-            input.type = isHidden ? 'text' : 'password';
-            icon.classList.toggle('fa-eye', !isHidden);
-            icon.classList.toggle('fa-eye-slash', isHidden);
-            icon.classList.toggle('fa-light', !isHidden);
-            icon.classList.toggle('fa-solid', isHidden);
-        });
-    });
-}
-setupPasswordToggles();
-
-function validateSignupForm() {
-    let valid = true;
-    const fullname = signupForm.querySelector('#fullname');
-    const phone = signupForm.querySelector('#phone');
-    const pass = signupForm.querySelector('#password');
-    const confirm = signupForm.querySelector('#password_confirmation');
-    const checkbox = signupForm.querySelector('#checkbox-signup');
-    const phoneRegex = /^\d{10,11}$/;
-
-    clearAllErrors();
-
-    if (!fullname.value.trim()) {
-        displayError(fullname, 'Vui lòng nhập họ và tên', '.form-message-name');
-        valid = false;
+// 📡 API Helper Function
+async function apiCall(controller, action, data = null, method = 'GET', token = null) {
+    let url = `${API_URL}?controller=${controller}&action=${action}`;
+    
+    const options = {
+        method: method,
+        headers: {}
+    };
+    
+    // Only set Content-Type for requests with body
+    if (data && (method === 'POST' || method === 'PUT')) {
+        options.headers['Content-Type'] = 'application/json';
+        options.body = JSON.stringify(data);
     }
-
-    if (!phoneRegex.test(phone.value.trim())) {
-        displayError(phone, 'Vui lòng nhập số điện thoại hợp lệ', '.form-message-phone');
-        valid = false;
-    } else if (userDatabase.some(u => u.phone === phone.value.trim())) {
-        displayError(phone, 'Số điện thoại đã được đăng ký', '.form-message-phone');
-        valid = false;
+    
+    if (token) {
+        options.headers['Authorization'] = `Bearer ${token}`;
     }
-
-    if (pass.value.length < 6) {
-        displayError(pass, 'Mật khẩu tối thiểu 6 ký tự', '.form-message-password');
-        valid = false;
+    
+    const response = await fetch(url, options);
+    const result = await response.json();
+    
+    if (!result.success) {
+        throw new Error(result.message || 'API Error');
     }
-
-    if (confirm.value !== pass.value || !confirm.value) {
-        displayError(confirm, 'Mật khẩu nhập lại không khớp', '.form-message-password-confi');
-        valid = false;
-    }
-
-    if (!checkbox.checked) {
-        displayError(null, 'Vui lòng đồng ý điều khoản', '.form-message-checkbox');
-        valid = false;
-    }
-
-    if (valid) {
-        userDatabase.push({
-            phone: phone.value.trim(),
-            password: pass.value,
-            fullname: fullname.value.trim()
-        });
-    }
-    return valid;
+    
+    return result.data;
 }
 
-function validateLoginForm() {
-    let valid = true;
-    const loginInput = loginForm.querySelector('#phone-login'); // Đổi tên để dễ hiểu hơn
-    const pass = loginForm.querySelector('#password-login');
-    const msg = document.querySelector('.form-message-check-login');
-
-    clearError(loginInput, '.form-message-login-phone');
-    clearError(pass, '.form-message-check-login');
-    msg.textContent = '';
-
-    const inputValue = loginInput.value.trim();
-    const passwordValue = pass.value.trim();
-
-    if (!inputValue) {
-        displayError(loginInput, 'Vui lòng nhập họ tên hoặc số điện thoại', '.form-message-login-phone');
-        valid = false;
-    }
-
-    if (!passwordValue) {
-        msg.textContent = 'Vui lòng nhập mật khẩu';
-        pass.classList.add('is-invalid');
-        valid = false;
-    }
-
-    if (!valid) return false;
-
-    // Tìm kiếm người dùng bằng cả họ tên HOẶC số điện thoại, và mật khẩu phải khớp
-    const user = userDatabase.find(u => 
-        (u.fullname.toLowerCase() === inputValue.toLowerCase() || u.phone === inputValue) && 
-        u.password === passwordValue
-    );
-
-    if (!user) {
-        loginInput.classList.add('is-invalid');
-        pass.classList.add('is-invalid');
-        msg.textContent = 'Thông tin đăng nhập hoặc mật khẩu không đúng.';
-        return false;
-    }
-    return true;
-}
-
-if (signupForm) {
-    signupForm.addEventListener('submit', e => {
-        e.preventDefault();
-        if (validateSignupForm()) {
-            alert('Đăng ký thành công!');
-            switchToLogin();
-        }
-    });
-}
-
-if (loginForm) {
-    loginForm.addEventListener('submit', e => {
-        e.preventDefault();
-        if (validateLoginForm()) {
-            alert('Đăng nhập thành công!');
-            closeModal();
-        }
-    });
-}
-
-function showModal() {
-    loginModal.classList.add('active');
-    document.body.style.overflow = 'hidden';
-}
-
-function closeModal() {
-    loginModal.classList.remove('active');
-    document.body.style.overflow = 'auto';
-    clearAllErrors();
-}
-
-function switchToSignup() {
-    clearAllErrors();
-    signupFormContainer.style.display = 'block';
-    loginFormContainer.style.display = 'none';
-    showModal();
-}
-
-function switchToLogin() {
-    clearAllErrors();
-    loginFormContainer.style.display = 'block';
-    signupFormContainer.style.display = 'none';
-    showModal();
-}
-
-loginLinks.forEach(l => l.addEventListener('click', switchToLogin));
-signupLinks.forEach(l => l.addEventListener('click', switchToSignup));
-closeButton.addEventListener('click', closeModal);
-loginModal.addEventListener('click', e => { if (e.target === loginModal) closeModal(); });
-if (loginSwitchLink) loginSwitchLink.addEventListener('click', switchToLogin);
-
-if (mainMenuLogin && dropdownMenu) {
-    mainMenuLogin.addEventListener('mouseenter', () => dropdownMenu.style.display = 'block');
-    mainMenuLogin.addEventListener('mouseleave', () => {
-        setTimeout(() => {
-            if (!dropdownMenu.matches(':hover')) dropdownMenu.style.display = 'none';
-        }, 100);
-    });
-    dropdownMenu.addEventListener('mouseleave', () => dropdownMenu.style.display = 'none');
-}
+// ✅ Global product data (loaded from API)
+let productsData = [];
 
 
 
@@ -300,16 +133,15 @@ function changePage(newPage) {
 }
 
 
-document.addEventListener('DOMContentLoaded', function () {
-    // Đảm bảo productsData đã được tải trước đây
-    if (typeof productsData !== 'undefined' && productsData.length > 0) {
-        // Hiển thị trang đầu tiên khi trang tải xong
+document.addEventListener('DOMContentLoaded', async function () {
+
+    // �🔌 Load products from API
+    try {
+        productsData = await apiCall('products', 'list', null, 'GET');
         changePage(currentPage);
-    } else {
-        // Xử lý khi không có dữ liệu sản phẩm
-        console.error("Không tìm thấy dữ liệu sản phẩm (productsData).");
-        renderProducts([]); // Hiển thị thông báo "Không có kết quả"
-        renderPagination(0, 0);
+    } catch (error) {
+        console.error('Lỗi tải sản phẩm:', error);
+        renderProducts([]);
     }
 });
 
@@ -350,7 +182,7 @@ function detailProduct(productId) {
 
                 <div class="modal-note">
                     <h4>GHI CHÚ</h4>
-                    <input type="text" placeholder="Nhập thông tin cần lưu ý...">
+                    <input type="text" id="noteInput" placeholder="Nhập thông tin cần lưu ý...">
                 </div>
 
                 <div class="modal-total">
@@ -448,12 +280,22 @@ function buyNow(productId) {
 }
 
 function showCategory(categoryName) {
-    console.log("Đang lọc theo danh mục:", categoryName);
-    const filteredProducts = productsData.filter(product => product.category === categoryName);
-    renderProducts(filteredProducts);
-    const productsSection = document.querySelector('.product-list');
-    if (productsSection) {
-        // Cuộn 
-        productsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+    // 🔌 Load filtered products from API
+    (async () => {
+        try {
+            const filteredProducts = await apiCall('products', 'list', 
+                { category: categoryName }, 'GET');
+            productsData = filteredProducts;
+            currentPage = 1; // Reset to first page
+            renderProducts(filteredProducts);
+            
+            const productsSection = document.querySelector('.product-list');
+            if (productsSection) {
+                productsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        } catch (error) {
+            console.error('Lỗi lọc danh mục:', error);
+            alert('Lỗi: ' + error.message);
+        }
+    })();
 }

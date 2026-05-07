@@ -7,9 +7,9 @@ function addToCart(productId) {
     const note = noteInput ? noteInput.value.trim() : '';
     const existingProductIndex = cart.findIndex(item => item.id === productId);
     if (existingProductIndex > -1) {
-        cart[existingProduct-index].quantity += quantity;
+        cart[existingProductIndex].quantity += quantity;
         if (note) {
-            cart[existingProduct-index].note += `; ${note}`;
+            cart[existingProductIndex].note += `; ${note}`;
         }
     } else {
         // Nếu chưa có, tìm thông tin sản phẩm và thêm vào giỏ hàng
