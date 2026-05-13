@@ -3,93 +3,147 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quản lý Cửa hàng - Vy Food</title>
-    <link rel="stylesheet" href="./assets/font/font-awesome-pro-v6-6.2.0/css/all.min.css" /> 
-    <link rel="stylesheet" href="assets/css/dashboard.css">  
+    <title>Admin Dashboard - Vy Food</title>
+    <link rel="stylesheet" href="./assets/font/font-awesome-pro-v6-6.2.0/css/all.min.css">
+    <link rel="stylesheet" href="assets/css/dashboard.css">
 </head>
 <body>
-    <div class="dashboard-container">
+    <div class="dashboard-shell">
         <aside class="sidebar">
-            <div class="sidebar-header">
-                <img src="assets/img/favicon.png" alt="Vy Food Logo"> <h3>VY FOOD</h3>
+            <div class="sidebar-brand">
+                <img src="assets/img/vy-food.png" alt="Vy Food">
+                <strong>Vy Food Admin</strong>
             </div>
-            <ul class="sidebar-nav">
-                <li><a href="#" class="nav-link active" data-target="overview-section"><i class="fa-solid fa-chart-pie"></i> Trang tổng quan</a></li>
-                <li><a href="#" class="nav-link" data-target="products-section"><i class="fa-solid fa-burger"></i> Sản phẩm</a></li>
-                <li><a href="#" class="nav-link" data-target="customers-section"><i class="fa-solid fa-users"></i> Khách hàng</a></li>
-                <li><a href="#" class="nav-link" data-target="orders-section"><i class="fa-solid fa-receipt"></i> Đơn hàng</a></li>
-            </ul>
-            <div class="sidebar-footer">
-                <ul class="sidebar-nav">
-                    <li><a href="index.html"><i class="fa-solid fa-house"></i> Trang chủ</a></li>
-                    <li><a href="index.html"><i class="fa-solid fa-right-from-bracket"></i> Đăng xuất</a></li>
-                </ul>
-            </div>
+            <nav class="sidebar-nav">
+                <button class="nav-link active" data-section="dashboard-section"><i class="fa-solid fa-chart-pie"></i> Dashboard</button>
+                <button class="nav-link" data-section="products-section"><i class="fa-solid fa-burger"></i> Quan ly mon an</button>
+                <button class="nav-link" data-section="categories-section"><i class="fa-solid fa-layer-group"></i> Danh muc</button>
+                <button class="nav-link" data-section="orders-section"><i class="fa-solid fa-receipt"></i> Don hang</button>
+                <button class="nav-link" data-section="customers-section"><i class="fa-solid fa-users"></i> Khach hang</button>
+            </nav>
+            <button id="logoutBtn" class="logout-btn"><i class="fa-solid fa-right-from-bracket"></i> Dang xuat</button>
         </aside>
 
         <main class="main-content">
-            <section id="overview-section" class="content-section active">
-                <header class="main-header">TRANG TỔNG QUÁT CỦA CỬA HÀNG VY FOOD</header>
-                <p>Nội dung trang tổng quát ở đây</p>
+            <header class="topbar">
+                <div>
+                    <h1>Quan tri cua hang</h1>
+                    <p id="adminName">Dang kiem tra quyen truy cap...</p>
+                </div>
+                <a href="index.html" class="secondary-btn">Ve trang chu</a>
+            </header>
+
+            <section id="dashboard-section" class="content-section active">
+                <div class="stats-grid">
+                    <article class="stat-card"><span>Tong so mon an</span><strong id="statProducts">0</strong></article>
+                    <article class="stat-card"><span>Tong so don hang</span><strong id="statOrders">0</strong></article>
+                    <article class="stat-card"><span>Tong so khach hang</span><strong id="statCustomers">0</strong></article>
+                    <article class="stat-card"><span>Tong doanh thu</span><strong id="statRevenue">0 d</strong></article>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2>Don hang moi nhat</h2>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr><th>Ma</th><th>Khach hang</th><th>SDT</th><th>Tong tien</th><th>Trang thai</th><th>Ngay tao</th></tr>
+                            </thead>
+                            <tbody id="recentOrdersTable"></tbody>
+                        </table>
+                    </div>
+                </div>
             </section>
 
             <section id="products-section" class="content-section">
-                <header class="main-header">QUẢN LÝ SẢN PHẨM</header>
-                <table class="product-table">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Tên sản phẩm</th>
-                            <th>Giá</th>
-                            <th>Danh mục</th>
-                            <th>Hành động</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                       
-                    </tbody>
-                </table>
+                <div class="panel">
+                    <div class="panel-header"><h2>Quan ly mon an</h2></div>
+                    <form id="productForm" class="admin-form">
+                        <input type="hidden" id="productId">
+                        <input type="text" id="productTitle" placeholder="Ten mon" required>
+                        <input type="number" id="productPrice" placeholder="Gia" min="1" required>
+                        <select id="productCategory" required></select>
+                        <input type="text" id="productImage" placeholder="Duong dan anh">
+                        <select id="productStatus">
+                            <option value="1">Con ban</option>
+                            <option value="0">Ngung ban</option>
+                        </select>
+                        <textarea id="productDescription" placeholder="Mo ta"></textarea>
+                        <div class="form-actions">
+                            <button type="submit" class="primary-btn">Luu mon an</button>
+                            <button type="button" id="resetProductBtn" class="secondary-btn">Lam moi</button>
+                        </div>
+                    </form>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr><th>Anh</th><th>Ten mon</th><th>Danh muc</th><th>Gia</th><th>Trang thai</th><th>Hanh dong</th></tr>
+                            </thead>
+                            <tbody id="productsTable"></tbody>
+                        </table>
+                    </div>
+                </div>
             </section>
 
-            <section id="customers-section" class="content-section">
-                <header class="main-header">QUẢN LÝ KHÁCH HÀNG</header>
-                <p>Nội dung trang quản lý khách hàng sẽ ở đây...</p>
+            <section id="categories-section" class="content-section">
+                <div class="panel">
+                    <div class="panel-header"><h2>Quan ly danh muc</h2></div>
+                    <form id="categoryForm" class="admin-form compact-form">
+                        <input type="hidden" id="categoryId">
+                        <input type="text" id="categoryName" placeholder="Ten danh muc" required>
+                        <input type="text" id="categoryDescription" placeholder="Mo ta">
+                        <input type="number" id="categoryOrder" placeholder="Thu tu" value="0">
+                        <div class="form-actions">
+                            <button type="submit" class="primary-btn">Luu danh muc</button>
+                            <button type="button" id="resetCategoryBtn" class="secondary-btn">Lam moi</button>
+                        </div>
+                    </form>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr><th>ID</th><th>Ten danh muc</th><th>Mo ta</th><th>Thu tu</th><th>Hanh dong</th></tr>
+                            </thead>
+                            <tbody id="categoriesTable"></tbody>
+                        </table>
+                    </div>
+                </div>
             </section>
 
             <section id="orders-section" class="content-section">
-                <header class="main-header">QUẢN LÝ ĐƠN HÀNG</header>
-                <p>Nội dung trang quản lý đơn hàng sẽ ở đây...</p>
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2>Quan ly don hang</h2>
+                        <input type="search" id="orderSearch" placeholder="Tim theo ten, SDT, ma don">
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr><th>Ma</th><th>Khach hang</th><th>SDT</th><th>Tong tien</th><th>Trang thai</th><th>Ngay tao</th><th>Hanh dong</th></tr>
+                            </thead>
+                            <tbody id="ordersTable"></tbody>
+                        </table>
+                    </div>
+                    <div id="orderDetail" class="detail-box"></div>
+                </div>
+            </section>
+
+            <section id="customers-section" class="content-section">
+                <div class="panel">
+                    <div class="panel-header"><h2>Quan ly khach hang</h2></div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr><th>ID</th><th>Ten</th><th>SDT</th><th>Email</th><th>Trang thai</th><th>Ngay tao</th><th>Hanh dong</th></tr>
+                            </thead>
+                            <tbody id="customersTable"></tbody>
+                        </table>
+                    </div>
+                </div>
             </section>
         </main>
     </div>
 
-    <script>
-        // Lấy tất cả các link trong menu và các section nội dung
-        const navLinks = document.querySelectorAll('.nav-link');
-        const contentSections = document.querySelectorAll('.content-section');
-
-        // Gắn sự kiện click cho mỗi link trong menu
-        navLinks.forEach(link => {
-            link.addEventListener('click', function(event) {
-                event.preventDefault(); // Ngăn link tải lại trang
-
-                // Lấy ID của section mục tiêu từ thuộc tính 'data-target'
-                const targetId = this.getAttribute('data-target');
-                const targetSection = document.getElementById(targetId);
-
-                // Xóa class 'active' khỏi tất cả các link và section
-                navLinks.forEach(l => l.classList.remove('active'));
-                contentSections.forEach(s => s.classList.remove('active'));
-
-                // Thêm class 'active' cho link vừa click và section tương ứng
-                this.classList.add('active');
-                if (targetSection) {
-                    targetSection.classList.add('active');
-                }
-            });
-        });
-       
-
-    </script>
+    <script src="js/dashboard-admin.js"></script>
 </body>
 </html>

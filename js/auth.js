@@ -1,5 +1,5 @@
 /**
- * 🔐 AUTHENTICATION MANAGER - ENHANCED
+ * AUTHENTICATION MANAGER - ENHANCED
  * Handles login, logout, and user state management
  * Key Improvements:
  * - No page reload after login (smooth UX)
@@ -13,21 +13,21 @@ function checkLogin() {
     const user = JSON.parse(localStorage.getItem('auth_user') || 'null');
     const token = localStorage.getItem('auth_token');
     
-    // ✅ ALREADY LOGGED IN - Hide modal, show user info
+    // ALREADY LOGGED IN - Hide modal, show user info
     if (user && token) {
         enablePageScroll();
         hideLoginModal();
         clearAuthErrors();
         updateHeaderUI(user);
         
-        // 🚀 Redirect admin to dashboard
+        // Redirect admin to dashboard
         if (user.role === 'admin') {
             window.location.href = 'dashboard.html';
         }
         return;
     }
     
-    // ❌ NOT LOGGED IN - Show modal
+    // NOT LOGGED IN - Show modal
     showLoginModal();
     disablePageScroll();
 }
@@ -105,7 +105,7 @@ function performLogin(identifier, password) {
     const errorEl = document.querySelector('.auth-error-message');
     if (errorEl) errorEl.style.display = 'none';
     
-    // 🔌 CALL LOGIN API
+    // CALL LOGIN API
     fetch('http://localhost/btlWebbanhang/api/index.php?controller=auth&action=login', {
         method: 'POST',
         headers: {
@@ -116,24 +116,23 @@ function performLogin(identifier, password) {
     .then(response => response.json())
     .then(result => {
         if (result.success) {
-            // 💾 Save to localStorage
+            //  Save to localStorage
             localStorage.setItem('auth_token', result.data.token);
             localStorage.setItem('auth_user', JSON.stringify(result.data.user));
             
-            // ✅ Update UI without reload
+            // Update UI without reload
             updateHeaderUI(result.data.user);
             hideLoginModal();
             enablePageScroll();
             clearAuthErrors();
             
-            // 🚀 Redirect admin
             if (result.data.user.role === 'admin') {
                 window.location.href = 'dashboard.html';
                 return;
             }
             
             // Show success message (optional)
-            console.log('✅ Đăng nhập thành công!');
+            console.log(' Đăng nhập thành công!');
             
         } else {
             showError(result.message || 'Đăng nhập thất bại');
@@ -180,7 +179,7 @@ function performRegister(fullname, phone, password, email) {
     const errorEl = document.querySelector('.auth-error-message');
     if (errorEl) errorEl.style.display = 'none';
     
-    // 🔌 CALL REGISTER API
+    // CALL REGISTER API
     fetch('http://localhost/btlWebbanhang/api/index.php?controller=auth&action=register', {
         method: 'POST',
         headers: {
@@ -276,7 +275,7 @@ function updateHeaderUI(user) {
                 <a href="javascript:void(0)" class="user-menu-item" onclick="changePassword()">
                     <i class="fa-light fa-key"></i> Đổi mật khẩu
                 </a>
-                <a href="ls.html" class="user-menu-item">
+                <a href="history.html" class="user-menu-item">
                     <i class="fa-light fa-history"></i> Lịch sử mua hàng
                 </a>
                 <div class="user-menu-divider"></div>

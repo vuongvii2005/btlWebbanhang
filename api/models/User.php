@@ -19,7 +19,8 @@ class User {
         $validator = new Validator([
             'fullname' => $fullname,
             'phone' => $phone,
-            'password' => $password
+            'password' => $password,
+            'email' => $email
         ]);
         
         $validator
@@ -27,7 +28,8 @@ class User {
             ->required('phone', 'Phone is required')
             ->phone('phone', 'Phone format is invalid')
             ->required('password', 'Password is required')
-            ->min('password', PASSWORD_MIN_LENGTH, 'Password min ' . PASSWORD_MIN_LENGTH . ' chars');
+            ->min('password', PASSWORD_MIN_LENGTH, 'Password min ' . PASSWORD_MIN_LENGTH . ' chars')
+            ->email('email', 'Email format is invalid');
         
         if ($validator->fails()) {
             return [
@@ -43,6 +45,14 @@ class User {
                 'success' => false,
                 'message' => 'Phone number already registered',
                 'code' => 'PHONE_EXISTS'
+            ];
+        }
+
+        if (!empty($email) && $this->emailExists($email)) {
+            return [
+                'success' => false,
+                'message' => 'Email already registered',
+                'code' => 'EMAIL_EXISTS'
             ];
         }
         
@@ -111,7 +121,7 @@ class User {
         
         // Find user by phone or email
         $stmt = $this->pdo->prepare(
-            "SELECT id, fullname, phone, email, password, role FROM users WHERE phone = ? OR email = ?"
+            "SELECT id, fullname, phone, email, password, role, status FROM users WHERE phone = ? OR email = ?"
         );
         $stmt->execute([$identifier, $identifier]);
         $user = $stmt->fetch();
@@ -121,6 +131,14 @@ class User {
                 'success' => false,
                 'message' => 'Phone/email or password is incorrect',
                 'code' => 'INVALID_CREDENTIALS'
+            ];
+        }
+
+        if ((int)$user['status'] !== 1) {
+            return [
+                'success' => false,
+                'message' => 'Account is locked',
+                'code' => 'ACCOUNT_LOCKED'
             ];
         }
         
@@ -155,13 +173,89 @@ class User {
             ]
         ];
     }
+
+    /**
+     * Tạo admin tạm (dev only)
+     */
+    public function seedAdmin($fullname, $phone, $password, $email = null) {
+        $stmt = $this->pdo->prepare(
+            "SELECT id, role FROM users WHERE phone = ? OR email = ? LIMIT 1"
+        );
+        $stmt->execute([sanitizeString($phone), $email ? sanitizeString($email) : null]);
+        $existing = $stmt->fetch();
+
+        if ($existing) {
+            if ($existing['role'] !== 'admin') {
+                return [
+                    'success' => false,
+                    'message' => 'User already exists and is not admin'
+                ];
+            }
+
+            $hashedPassword = hashPassword($password);
+            $stmt = $this->pdo->prepare(
+                "UPDATE users
+                 SET fullname = ?, phone = ?, password = ?, email = ?, status = 1, updated_at = NOW()
+                 WHERE id = ?"
+            );
+            $stmt->execute([
+                sanitizeString($fullname),
+                sanitizeString($phone),
+                $hashedPassword,
+                $email ? sanitizeString($email) : null,
+                $existing['id']
+            ]);
+
+            return [
+                'success' => true,
+                'message' => 'Admin updated',
+                'user_id' => $existing['id'],
+                'created' => false
+            ];
+        }
+
+        $hashedPassword = hashPassword($password);
+
+        try {
+            $stmt = $this->pdo->prepare(
+                "INSERT INTO users (fullname, phone, password, email, role, created_at)
+                 VALUES (?, ?, ?, ?, 'admin', NOW())"
+            );
+
+            $stmt->execute([
+                sanitizeString($fullname),
+                sanitizeString($phone),
+                $hashedPassword,
+                $email ? sanitizeString($email) : null
+            ]);
+
+            $userId = $this->pdo->lastInsertId();
+
+            return [
+                'success' => true,
+                'message' => 'Admin created',
+                'user_id' => $userId,
+                'created' => true
+            ];
+        } catch (PDOException $e) {
+            logError('Seed admin failed', [
+                'phone' => $phone,
+                'error' => $e->getMessage()
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Seed admin failed'
+            ];
+        }
+    }
     
     /**
      * Lấy thông tin user
      */
     public function getById($id) {
         $stmt = $this->pdo->prepare(
-            "SELECT id, fullname, phone, email, address, role, created_at FROM users WHERE id = ?"
+            "SELECT id, fullname, phone, email, address, role, status, created_at FROM users WHERE id = ?"
         );
         $stmt->execute([$id]);
         return $stmt->fetch();
@@ -256,20 +350,40 @@ class User {
         $result = $stmt->fetch();
         return $result['count'] > 0;
     }
+
+    /**
+     * Check if email exists
+     */
+    public function emailExists($email) {
+        $stmt = $this->pdo->prepare("SELECT COUNT(*) as count FROM users WHERE email = ?");
+        $stmt->execute([sanitizeString($email)]);
+        $result = $stmt->fetch();
+        return $result['count'] > 0;
+    }
     
     /**
      * Lấy danh sách users (Admin)
      */
-    public function getAll($limit = 20, $offset = 0) {
-        $stmt = $this->pdo->prepare(
-            "SELECT id, fullname, phone, email, role, created_at 
-             FROM users 
-             ORDER BY created_at DESC
-             LIMIT ? OFFSET ?"
-        );
+    public function getAll($limit = 20, $offset = 0, $role = null) {
+        $query = "SELECT id, fullname, phone, email, address, role, status, created_at FROM users WHERE 1=1";
+        $params = [];
+
+        if ($role) {
+            $query .= " AND role = ?";
+            $params[] = $role;
+        }
+
+        $query .= " ORDER BY created_at DESC LIMIT ? OFFSET ?";
+        $params[] = (int)$limit;
+        $params[] = (int)$offset;
+
+        $stmt = $this->pdo->prepare($query);
         
-        $stmt->bindValue(1, $limit, PDO::PARAM_INT);
-        $stmt->bindValue(2, $offset, PDO::PARAM_INT);
+        $i = 1;
+        foreach ($params as $param) {
+            $stmt->bindValue($i, $param, is_int($param) ? PDO::PARAM_INT : PDO::PARAM_STR);
+            $i++;
+        }
         $stmt->execute();
         
         return $stmt->fetchAll();
@@ -278,10 +392,25 @@ class User {
     /**
      * Đếm tổng users
      */
-    public function count() {
-        $stmt = $this->pdo->query("SELECT COUNT(*) as count FROM users");
+    public function count($role = null) {
+        if ($role) {
+            $stmt = $this->pdo->prepare("SELECT COUNT(*) as count FROM users WHERE role = ?");
+            $stmt->execute([$role]);
+        } else {
+            $stmt = $this->pdo->query("SELECT COUNT(*) as count FROM users");
+        }
         $result = $stmt->fetch();
         return $result['count'];
+    }
+
+    public function updateStatus($id, $status) {
+        $stmt = $this->pdo->prepare("UPDATE users SET status = ?, updated_at = NOW() WHERE id = ? AND role = 'customer'");
+        $result = $stmt->execute([(int)$status, $id]);
+
+        return [
+            'success' => $result,
+            'message' => $result ? 'User status updated' : 'Update failed'
+        ];
     }
 }
 

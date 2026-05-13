@@ -66,6 +66,74 @@ class Product {
         $stmt->execute();
         return $stmt->fetchAll();
     }
+
+    /**
+     * Lay danh sach san pham cho admin, bao gom ca mon ngung ban.
+     */
+    public function getAllAdmin($filters = []) {
+        $query = "SELECT p.*, c.name AS category_name
+                  FROM products p
+                  LEFT JOIN categories c ON p.category_id = c.id
+                  WHERE 1=1";
+        $params = [];
+
+        if (!empty($filters['search'])) {
+            $query .= " AND (p.title LIKE ? OR p.description LIKE ?)";
+            $search = '%' . $filters['search'] . '%';
+            $params[] = $search;
+            $params[] = $search;
+        }
+
+        if (array_key_exists('status', $filters) && $filters['status'] !== null && $filters['status'] !== '') {
+            $query .= " AND p.status = ?";
+            $params[] = (int)$filters['status'];
+        }
+
+        if (!empty($filters['category_id'])) {
+            $query .= " AND p.category_id = ?";
+            $params[] = (int)$filters['category_id'];
+        }
+
+        $query .= " ORDER BY p.created_at DESC LIMIT ? OFFSET ?";
+        $params[] = min((int)($filters['limit'] ?? DEFAULT_PER_PAGE), MAX_PER_PAGE);
+        $params[] = (int)($filters['offset'] ?? 0);
+
+        $stmt = $this->pdo->prepare($query);
+        $i = 1;
+        foreach ($params as $param) {
+            $stmt->bindValue($i, $param, is_int($param) ? PDO::PARAM_INT : PDO::PARAM_STR);
+            $i++;
+        }
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
+
+    public function countAdmin($filters = []) {
+        $query = "SELECT COUNT(*) AS count FROM products p WHERE 1=1";
+        $params = [];
+
+        if (!empty($filters['search'])) {
+            $query .= " AND (p.title LIKE ? OR p.description LIKE ?)";
+            $search = '%' . $filters['search'] . '%';
+            $params[] = $search;
+            $params[] = $search;
+        }
+
+        if (array_key_exists('status', $filters) && $filters['status'] !== null && $filters['status'] !== '') {
+            $query .= " AND p.status = ?";
+            $params[] = (int)$filters['status'];
+        }
+
+        if (!empty($filters['category_id'])) {
+            $query .= " AND p.category_id = ?";
+            $params[] = (int)$filters['category_id'];
+        }
+
+        $stmt = $this->pdo->prepare($query);
+        $stmt->execute($params);
+        $result = $stmt->fetch();
+        return $result['count'];
+    }
     
     /**
      * Lấy chi tiết sản phẩm
@@ -106,7 +174,7 @@ class Product {
         try {
             $stmt = $this->pdo->prepare(
                 "INSERT INTO products (category_id, title, description, price, image_url, stock, status, created_at)
-                 VALUES (?, ?, ?, ?, ?, ?, 1, NOW())"
+                 VALUES (?, ?, ?, ?, ?, ?, ?, NOW())"
             );
             
             $stmt->execute([
@@ -115,7 +183,8 @@ class Product {
                 sanitizeString($data['description'] ?? ''),
                 $data['price'],
                 $data['image_url'] ?? null,
-                $data['stock'] ?? 999
+                $data['stock'] ?? 999,
+                isset($data['status']) ? (int)$data['status'] : 1
             ]);
             
             $productId = $this->pdo->lastInsertId();

@@ -19,7 +19,8 @@ function addToCart(productId) {
                 id: product.id,
                 title: product.title,
                 price: product.price,
-                img: product.img,
+                img: product.image_url,
+                image_url: product.image_url,
                 quantity: quantity, 
                 note: note          
             });
@@ -59,7 +60,7 @@ function renderCart() {
         totalAmount += itemTotal;
         cartHtml += `
             <li class="cart-item">
-                <img src="${item.img}" alt="${item.title}">
+                <img src="${item.image_url || item.img || ''}" alt="${item.title}">
                 <div class="item-info">
                     <p class="item-title">${item.title}(Số Lượng ${item.quantity})</p>
                     ${item.note ? `<p class="item-note">Ghi chú: ${item.note}</p>` : ''}

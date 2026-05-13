@@ -72,7 +72,12 @@ body {
     font-weight: bold;
 }
 
-.radio-group label, .checkout-section input[type="text"], .checkout-section input[type="tel"], .checkout-section textarea {
+.radio-group label,
+.payment-method,
+.checkout-section input[type="text"],
+.checkout-section input[type="tel"],
+.checkout-section input[type="email"],
+.checkout-section textarea {
     display: block;
     width: 100%;
     margin-bottom: 15px;
@@ -93,7 +98,18 @@ body {
 .summary-item {
     display: flex;
     justify-content: space-between;
+    gap: 12px;
     margin-bottom: 10px;
+}
+
+.summary-item strong,
+.summary-item small {
+    display: block;
+}
+
+.summary-item small {
+    color: #777;
+    margin-top: 4px;
 }
 .summary-row {
     display: flex;
@@ -124,4 +140,33 @@ body {
 
 #summary-total{
     color: var(--red);
+}
+
+.place-order-btn:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+.checkout-message {
+    min-height: 20px;
+    margin: 12px 0 0;
+    font-weight: 700;
+    color: #b5292f;
+}
+
+.checkout-message.info {
+    color: #555;
+}
+
+.empty-checkout {
+    width: 100%;
+    background: #fff;
+    padding: 40px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.empty-checkout a {
+    color: var(--red);
+    font-weight: 700;
 }

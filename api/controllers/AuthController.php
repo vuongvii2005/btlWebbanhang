@@ -33,6 +33,40 @@ try {
     $action = $_GET['action'] ?? getInput('action') ?? 'register';
     
     switch ($action) {
+
+        case 'seed-admin':
+            if (!DEBUG_MODE) {
+                Response::forbidden();
+            }
+
+            if ($method !== 'POST') {
+                Response::error('Method not allowed', 405);
+            }
+
+            $input = getInput();
+            $fullname = $input['fullname'] ?? 'Admin Test';
+            $phone = $input['phone'] ?? 'admin';
+            $email = $input['email'] ?? 'admin@test.local';
+            $password = $input['password'] ?? 'admin123';
+
+            $result = $user->seedAdmin($fullname, $phone, $password, $email);
+
+            if ($result['success']) {
+                Response::success(
+                    [
+                        'user_id' => $result['user_id'],
+                        'created' => $result['created'],
+                        'credentials' => [
+                            'identifier' => $phone,
+                            'password' => $password
+                        ]
+                    ],
+                    $result['message']
+                );
+            } else {
+                Response::error($result['message'], 400);
+            }
+            break;
         
         case 'register':
             if ($method !== 'POST') {
@@ -56,7 +90,7 @@ try {
             } else {
                 Response::error(
                     $result['message'],
-                    $result['code'] === 'PHONE_EXISTS' ? 409 : 400,
+                    in_array($result['code'] ?? '', ['PHONE_EXISTS', 'EMAIL_EXISTS']) ? 409 : 400,
                     $result['errors'] ?? []
                 );
             }
@@ -75,6 +109,8 @@ try {
             );
             
             if ($result['success']) {
+                $auth->login($result['user']['id']);
+
                 Response::success(
                     [
                         'token' => $result['token'],
@@ -105,6 +141,27 @@ try {
             } else {
                 Response::notFound('User');
             }
+            break;
+
+        case 'session-user':
+            if ($method !== 'GET') {
+                Response::error('Method not allowed', 405);
+            }
+
+            if (session_status() === PHP_SESSION_NONE) {
+                session_start();
+            }
+
+            if (empty($_SESSION['user'])) {
+                Response::unauthorized();
+            }
+
+            $userInfo = $user->getById($_SESSION['user']['id']);
+            if (!$userInfo) {
+                Response::notFound('User');
+            }
+            unset($userInfo['password']);
+            Response::success($userInfo, 'Session user fetched');
             break;
             
         case 'logout':

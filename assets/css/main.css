@@ -382,3 +382,23 @@ a {
     color: var(--black);
     margin-top: 4px;
 }
+
+.product-list {
+    grid-template-columns: repeat(auto-fill, minmax(250px, 250px));
+    justify-content: end;
+}
+
+.product-card {
+    width: 250px;
+}
+
+@media (max-width: 600px) {
+    .product-list {
+        grid-template-columns: minmax(0, 1fr);
+        justify-content: stretch;
+    }
+
+    .product-card {
+        width: 100%;
+    }
+}

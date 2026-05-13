@@ -163,6 +163,14 @@ class Order {
             $query .= " AND status = ?";
             $params[] = $filters['status'];
         }
+
+        if (!empty($filters['search'])) {
+            $query .= " AND (customer_name LIKE ? OR customer_phone LIKE ? OR id = ?)";
+            $search = '%' . $filters['search'] . '%';
+            $params[] = $search;
+            $params[] = $search;
+            $params[] = ctype_digit((string)$filters['search']) ? (int)$filters['search'] : 0;
+        }
         
         if (!empty($filters['date_from'])) {
             $query .= " AND DATE(created_at) >= ?";
@@ -194,14 +202,16 @@ class Order {
      * Cập nhật status đơn hàng (Admin)
      */
     public function updateStatus($id, $status) {
-        $validStatuses = ['pending', 'confirmed', 'shipping', 'delivered', 'cancelled'];
+        $validStatuses = ['pending', 'confirmed', 'shipping', 'completed', 'delivered', 'cancelled'];
         
         if (!in_array($status, $validStatuses)) {
             return ['success' => false, 'message' => 'Invalid status'];
         }
+
+        $dbStatus = $status === 'completed' ? 'delivered' : $status;
         
         $stmt = $this->pdo->prepare("UPDATE orders SET status = ?, updated_at = NOW() WHERE id = ?");
-        $result = $stmt->execute([$status, $id]);
+        $result = $stmt->execute([$dbStatus, $id]);
         
         return [
             'success' => $result,
@@ -219,6 +229,14 @@ class Order {
         if (!empty($filters['status'])) {
             $query .= " AND status = ?";
             $params[] = $filters['status'];
+        }
+
+        if (!empty($filters['search'])) {
+            $query .= " AND (customer_name LIKE ? OR customer_phone LIKE ? OR id = ?)";
+            $search = '%' . $filters['search'] . '%';
+            $params[] = $search;
+            $params[] = $search;
+            $params[] = ctype_digit((string)$filters['search']) ? (int)$filters['search'] : 0;
         }
         
         $stmt = $this->pdo->prepare($query);

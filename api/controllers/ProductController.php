@@ -29,6 +29,31 @@ try {
     $action = $_GET['action'] ?? getInput('action') ?? 'list';
     
     switch ($action) {
+        case 'admin-list':
+            if ($method !== 'GET') {
+                Response::error('Method not allowed', 405);
+            }
+
+            $auth->requireAdmin();
+
+            $filters = [
+                'search' => getInput('search'),
+                'status' => getInput('status'),
+                'category_id' => getInput('category_id'),
+                'limit' => getInput('limit', 100),
+                'offset' => getInput('offset', 0)
+            ];
+
+            $products = $product->getAllAdmin($filters);
+            $total = $product->countAdmin($filters);
+            Response::paginated(
+                $products,
+                (int)($filters['offset'] / $filters['limit']) + 1,
+                $filters['limit'],
+                $total,
+                'Admin products fetched'
+            );
+            break;
         
         case 'list':
             if ($method !== 'GET') {

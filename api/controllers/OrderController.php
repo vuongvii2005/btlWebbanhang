@@ -35,6 +35,12 @@ try {
             
             $currentUser = $auth->require();
             $input = getInput();
+            if (!isset($input['customer_phone']) && isset($input['phone'])) {
+                $input['customer_phone'] = $input['phone'];
+            }
+            if (!isset($input['customer_address']) && isset($input['address'])) {
+                $input['customer_address'] = $input['address'];
+            }
             
             // Assume items từ localStorage/frontend
             $result = $order->create($currentUser['id'], $input);
@@ -110,6 +116,7 @@ try {
             
             $filters = [
                 'status' => getInput('status'),
+                'search' => getInput('search'),
                 'date_from' => getInput('date_from'),
                 'date_to' => getInput('date_to')
             ];
@@ -127,6 +134,27 @@ try {
                 $total,
                 'All orders fetched'
             );
+            break;
+
+        case 'admin-detail':
+            if ($method !== 'GET') {
+                Response::error('Method not allowed', 405);
+            }
+
+            $auth->requireAdmin();
+            $id = getInput('id');
+
+            if (!validatePositiveInt($id)) {
+                Response::badRequest(['id' => 'Invalid order ID']);
+            }
+
+            $orderData = $order->getById($id);
+
+            if ($orderData) {
+                Response::success($orderData, 'Order detail fetched');
+            } else {
+                Response::notFound('Order');
+            }
             break;
             
         case 'update-status':

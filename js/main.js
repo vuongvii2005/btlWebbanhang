@@ -4,6 +4,20 @@ const API_URL = 'http://localhost/btlWebbanhang/api/index.php';
 // 📡 API Helper Function
 async function apiCall(controller, action, data = null, method = 'GET', token = null) {
     let url = `${API_URL}?controller=${controller}&action=${action}`;
+
+    if (data && method === 'GET') {
+        const params = new URLSearchParams();
+        Object.entries(data).forEach(([key, value]) => {
+            if (value !== null && value !== undefined && value !== '') {
+                params.append(key, value);
+            }
+        });
+
+        const queryString = params.toString();
+        if (queryString) {
+            url += `&${queryString}`;
+        }
+    }
     
     const options = {
         method: method,
@@ -57,7 +71,7 @@ function renderProducts(productsData) {
         productsData.forEach((product) => {
             productHtml += `
             <div class="product-card">
-                <img src="${product.img}" alt="${product.title}">
+                <img src="${product.image_url || ''}" alt="${product.title}">
                 <h3 class="product-name">${product.title}</h3>
                 <p class="product-price">
                 ${new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(product.price)}</p>
@@ -111,6 +125,10 @@ function changePage(newPage) {
     const totalPages = Math.ceil(totalProducts / PRODUCTS_PER_PAGE);
 
     if (newPage < 1 || newPage > totalPages) {
+        if (totalProducts === 0) {
+            renderProducts([]);
+            renderPagination(0, 0);
+        }
         return;
     }
 
@@ -137,7 +155,7 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     // �🔌 Load products from API
     try {
-        productsData = await apiCall('products', 'list', null, 'GET');
+        productsData = await apiCall('product', 'list', { limit: 100 }, 'GET');
         changePage(currentPage);
     } catch (error) {
         console.error('Lỗi tải sản phẩm:', error);
@@ -164,7 +182,7 @@ function detailProduct(productId) {
         // 3. Tạo nội dung HTML cho modal
         const modalHtml = `
             <div class="modal-image-container">
-                <img src="${product.img}" alt="${product.title}">
+                <img src="${product.image_url || ''}" alt="${product.title}">
                 
             </div>
             <div class="modal-info">
@@ -178,7 +196,7 @@ function detailProduct(productId) {
                     </div>
                 </div>
 
-                <p class="modal-description">${product.desc}</p>
+                <p class="modal-description">${product.description || ''}</p>
 
                 <div class="modal-note">
                     <h4>GHI CHÚ</h4>
@@ -269,7 +287,8 @@ function buyNow(productId) {
         id: product.id,
         title: product.title,
         price: product.price,
-        img: product.img,
+        img: product.image_url,
+        image_url: product.image_url,
         quantity: quantity,
         note: note
     }];
@@ -283,8 +302,8 @@ function showCategory(categoryName) {
     // 🔌 Load filtered products from API
     (async () => {
         try {
-            const filteredProducts = await apiCall('products', 'list', 
-                { category: categoryName }, 'GET');
+            const filteredProducts = await apiCall('product', 'list', 
+                { category: categoryName, limit: 100 }, 'GET');
             productsData = filteredProducts;
             currentPage = 1; // Reset to first page
             renderProducts(filteredProducts);

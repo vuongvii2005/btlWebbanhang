@@ -13,3 +13,8 @@
     "phone": "0327954560",
     "error": "SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry 'haha@123' for key 'email'"
 }
+[2026-05-13 11:16:46] User registration failed
+{
+    "phone": "0399998888",
+    "error": "SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry 'codex_auth_0513161615@test.local' for key 'email'"
+}
