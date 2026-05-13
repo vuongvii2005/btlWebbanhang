@@ -3,18 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lich su mua hang - Vy Food</title>
+    <title>Lịch sử mua hàng - Vy Food</title>
     <link rel="stylesheet" href="assets/css/main.css">
     <link rel="stylesheet" href="assets/css/footer.css">
     <link rel="stylesheet" href="assets/font/font-awesome-pro-v6-6.2.0/css/all.min.css">
     <link rel="stylesheet" href="assets/css/history.css">
 </head>
 <body>
+    <header class="history-site-header">
+        <div class="history-nav-wrap">
+            <a href="index.html" class="history-logo">
+                <img src="./assets/img/vy-food.png" alt="Vy Food">
+            </a>
+            <nav class="history-nav">
+                <a href="index.html">Trang chủ</a>
+                <a href="index.html#home-products">Menu</a>
+                <a href="history.html" class="active">Lịch sử mua hàng</a>
+            </nav>
+            <div class="history-userbar">
+                <a href="index.html" class="history-cart-link">
+                    <i class="fa-light fa-basket-shopping"></i>
+                    <span>Giỏ hàng</span>
+                </a>
+                <span id="historyUserName" class="history-user-name"></span>
+            </div>
+        </div>
+    </header>
+
     <main class="history-page">
-        <div class="history-header">
-            <a href="index.html" class="back-link"><i class="fa-solid fa-arrow-left"></i> Trang chu</a>
-            <h1>Lich su mua hang</h1>
-            <p>Theo doi don hang va xem lai cac mon ban da dat.</p>
+        <section class="history-hero">
+            <div>
+                <a href="index.html" class="back-link"><i class="fa-solid fa-arrow-left"></i> Quay lại mua hàng</a>
+                <h1>Lịch sử mua hàng</h1>
+                <p>Theo dõi trạng thái đơn, xem chi tiết món đã đặt và hủy đơn khi còn chờ xác nhận.</p>
+            </div>
+        </section>
+
+        <div class="history-tabs" role="tablist" aria-label="Lọc đơn hàng">
+            <button class="history-tab active" data-filter="all" type="button">Tất cả</button>
+            <button class="history-tab" data-filter="pending" type="button">Chờ xác nhận</button>
+            <button class="history-tab" data-filter="completed" type="button">Hoàn thành</button>
+            <button class="history-tab" data-filter="cancelled" type="button">Đã hủy</button>
         </div>
 
         <div id="historyMessage" class="history-message"></div>
@@ -23,7 +52,7 @@
 
     <div id="orderDetailModal" class="history-modal">
         <div class="history-modal-content">
-            <button id="closeOrderDetail" class="modal-close">&times;</button>
+            <button id="closeOrderDetail" class="modal-close" type="button">&times;</button>
             <div id="orderDetailBody"></div>
         </div>
     </div>

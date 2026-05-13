@@ -46,6 +46,20 @@ try {
 
     foreach ($orders as &$order) {
         $order['status'] = normalizeOrderStatus($order['status']);
+        $itemStmt = $pdo->prepare(
+            "SELECT oi.product_id, oi.quantity, oi.price, p.title, p.image_url
+             FROM order_items oi
+             LEFT JOIN products p ON p.id = oi.product_id
+             WHERE oi.order_id = ?
+             ORDER BY oi.id ASC"
+        );
+        $itemStmt->execute([$order['id']]);
+        $items = $itemStmt->fetchAll();
+        $order['items'] = $items;
+        $order['total_items'] = array_reduce($items, function ($total, $item) {
+            return $total + (int)$item['quantity'];
+        }, 0);
+        $order['thumbnail'] = $items[0]['image_url'] ?? '';
     }
 
     Response::success($orders, 'Order history fetched');

@@ -1,3 +1,5 @@
+@import url("./fonts.css");
+
 :root {
     --white: #fff;
     --black: #000;
@@ -14,7 +16,7 @@ body {
     max-width: 1200px;
     margin: 40px auto;
     gap: 30px;
-    font-family: Arial, sans-serif;
+    font-family: var(--app-font-family);
 }
 
 .checkout-main {

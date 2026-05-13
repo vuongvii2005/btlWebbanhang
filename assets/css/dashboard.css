@@ -1,3 +1,5 @@
+@import url("./fonts.css");
+
 :root {
     --red: #b5292f;
     --red-dark: #8e1f24;
@@ -14,7 +16,7 @@
 
 body {
     margin: 0;
-    font-family: Arial, sans-serif;
+    font-family: var(--app-font-family);
     color: var(--text);
     background: var(--bg);
 }
