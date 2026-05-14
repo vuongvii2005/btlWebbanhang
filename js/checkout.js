@@ -1,5 +1,5 @@
 const CHECKOUT_API = 'http://localhost/btlWebbanhang/api/checkout/create-order.php';
-const AUTH_API = 'http://localhost/btlWebbanhang/api/index.php?controller=auth&action=session-user';
+const AUTH_API = `${window.APP_API_URL}?controller=auth&action=profile`;
 const formatMoney = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' });
 
 let cart = [];
@@ -26,29 +26,7 @@ function normalizeCart(items) {
 }
 
 async function fetchJson(url, options = {}) {
-    const response = await fetch(url, {
-        credentials: 'same-origin',
-        ...options,
-        headers: {
-            'Content-Type': 'application/json',
-            ...(options.headers || {})
-        }
-    });
-    const text = await response.text();
-    let result;
-
-    try {
-        result = JSON.parse(text);
-    } catch (error) {
-        throw new Error('API trả về dữ liệu không hợp lệ. Vui lòng kiểm tra PHP error/log.');
-    }
-
-    if (!result.success) {
-        const error = new Error(result.message || 'API Error');
-        error.code = result.code;
-        throw error;
-    }
-
+    const result = await apiFetch(url, options);
     return result.data;
 }
 
@@ -95,6 +73,12 @@ function renderCart() {
 }
 
 async function requireLoginAndFillUser() {
+    if (!isLoggedIn()) {
+        clearAuth();
+        window.location.href = 'index.html';
+        return;
+    }
+
     try {
         const user = await fetchJson(AUTH_API);
         document.getElementById('customer-name').value = user.fullname || '';
@@ -102,7 +86,11 @@ async function requireLoginAndFillUser() {
         document.getElementById('customer-address').value = user.address || '';
         document.getElementById('customer-email').value = user.email || '';
     } catch (error) {
-        window.location.href = 'index.html';
+        if (isAuthError(error)) {
+            window.location.href = 'index.html';
+            return;
+        }
+        setMessage(error.message || 'Không thể kiểm tra phiên đăng nhập.');
     }
 }
 
@@ -200,7 +188,7 @@ async function placeOrder() {
         alert('Đặt hàng thành công');
         window.location.href = 'history.html';
     } catch (error) {
-        if (error.code === 401) {
+        if (isAuthError(error)) {
             window.location.href = 'index.html';
             return;
         }

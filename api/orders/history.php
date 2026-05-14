@@ -14,6 +14,15 @@ function normalizeOrderStatus($status) {
 }
 
 function requireSessionUser() {
+    if (hasBearerToken()) {
+        $tokenUser = getAuthUser();
+        if ($tokenUser) {
+            return $tokenUser;
+        }
+
+        Response::unauthorized();
+    }
+
     if (session_status() === PHP_SESSION_NONE) {
         session_start();
     }

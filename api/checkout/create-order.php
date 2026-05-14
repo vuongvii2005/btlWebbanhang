@@ -10,6 +10,15 @@ require_once __DIR__ . '/../utils/Helper.php';
 require_once __DIR__ . '/../utils/Response.php';
 
 function requireSessionUser() {
+    if (hasBearerToken()) {
+        $tokenUser = getAuthUser();
+        if ($tokenUser) {
+            return $tokenUser;
+        }
+
+        Response::unauthorized();
+    }
+
     if (session_status() === PHP_SESSION_NONE) {
         session_start();
     }

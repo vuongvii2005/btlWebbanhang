@@ -1,35 +1,58 @@
 /**
- * AUTHENTICATION MANAGER - ENHANCED
- * Handles login, logout, and user state management
- * Key Improvements:
- * - No page reload after login (smooth UX)
- * - Proper modal handling with no infinite loop
- * - Clear error messages
- * - Session-based user info display
+ * Authentication manager.
+ * Frontend auth source: JWT stored in localStorage.
  */
 
+const AUTH_LOGIN_API = `${window.APP_API_URL}?controller=auth&action=login`;
+const AUTH_REGISTER_API = `${window.APP_API_URL}?controller=auth&action=register`;
+const AUTH_PROFILE_API = `${window.APP_API_URL}?controller=auth&action=profile`;
+const AUTH_LOGOUT_API = `${window.APP_API_URL}?controller=auth&action=logout`;
+const AUTH_CHANGE_PASSWORD_API = `${window.APP_API_URL}?controller=auth&action=change-password`;
+
 // ===== CHECK LOGIN STATUS ON PAGE LOAD =====
-function checkLogin() {
-    const user = JSON.parse(localStorage.getItem('auth_user') || 'null');
-    const token = localStorage.getItem('auth_token');
-    
-    // ALREADY LOGGED IN - Hide modal, show user info
-    if (user && token) {
+async function checkLogin() {
+    const token = getAuthToken();
+    const cachedUser = getCurrentUser();
+
+    if (!token) {
+        clearAuth();
+        showLoginModal();
+        disablePageScroll();
+        return;
+    }
+
+    try {
+        const result = await apiFetch(AUTH_PROFILE_API);
+        const user = result.data;
+
+        localStorage.setItem('auth_user', JSON.stringify(user));
         enablePageScroll();
         hideLoginModal();
         clearAuthErrors();
         updateHeaderUI(user);
-        
-        // Redirect admin to dashboard
-        if (user.role === 'admin') {
+
+        if (user.role === 'admin' && !window.location.pathname.endsWith('/dashboard.html')) {
             window.location.href = 'dashboard.html';
         }
-        return;
+    } catch (error) {
+        if (isAuthError(error)) {
+            clearAuth();
+            showLoginModal();
+            disablePageScroll();
+            return;
+        }
+
+        // Server/network errors should not force logout or redirect.
+        if (cachedUser) {
+            enablePageScroll();
+            hideLoginModal();
+            updateHeaderUI(cachedUser);
+        } else {
+            showLoginModal();
+            disablePageScroll();
+        }
+        showError(error.message || 'Không thể kiểm tra phiên đăng nhập.');
     }
-    
-    // NOT LOGGED IN - Show modal
-    showLoginModal();
-    disablePageScroll();
 }
 
 // ===== SHOW/HIDE LOGIN MODAL =====
@@ -68,7 +91,6 @@ function showError(message) {
     if (errorEl) {
         errorEl.textContent = message;
         errorEl.style.display = 'block';
-        // Auto-hide after 5 seconds
         setTimeout(() => {
             errorEl.style.display = 'none';
         }, 5000);
@@ -84,14 +106,12 @@ function clearAuthErrors() {
 }
 
 // ===== HANDLE LOGIN FORM SUBMISSION =====
-// Called from form onsubmit in HTML
 function handleLoginSubmit(event) {
     event.preventDefault();
-    
+
     const identifier = document.getElementById('loginPhone').value.trim();
     const password = document.getElementById('loginPassword').value.trim();
-    
-    // Validate
+
     if (!identifier || !password) {
         showError('Vui lòng nhập đầy đủ số điện thoại/email và mật khẩu');
         return false;
@@ -101,125 +121,88 @@ function handleLoginSubmit(event) {
     return false;
 }
 
-function performLogin(identifier, password) {
-    const errorEl = document.querySelector('.auth-error-message');
-    if (errorEl) errorEl.style.display = 'none';
-    
-    // CALL LOGIN API
-    fetch('http://localhost/btlWebbanhang/api/index.php?controller=auth&action=login', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ identifier, password })
-    })
-    .then(response => response.json())
-    .then(result => {
-        if (result.success) {
-            //  Save to localStorage
-            localStorage.setItem('auth_token', result.data.token);
-            localStorage.setItem('auth_user', JSON.stringify(result.data.user));
-            
-            // Update UI without reload
-            updateHeaderUI(result.data.user);
-            hideLoginModal();
-            enablePageScroll();
-            clearAuthErrors();
-            
-            if (result.data.user.role === 'admin') {
-                window.location.href = 'dashboard.html';
-                return;
-            }
-            
-            // Show success message (optional)
-            console.log(' Đăng nhập thành công!');
-            
-        } else {
-            showError(result.message || 'Đăng nhập thất bại');
+async function performLogin(identifier, password) {
+    clearAuthErrors();
+
+    try {
+        const result = await apiFetch(AUTH_LOGIN_API, {
+            method: 'POST',
+            body: JSON.stringify({ identifier, password })
+        });
+
+        localStorage.setItem('auth_token', result.data.token);
+        localStorage.setItem('auth_user', JSON.stringify(result.data.user));
+
+        updateHeaderUI(result.data.user);
+        hideLoginModal();
+        enablePageScroll();
+        clearAuthErrors();
+
+        if (result.data.user.role === 'admin') {
+            window.location.href = 'dashboard.html';
         }
-    })
-    .catch(error => {
+    } catch (error) {
         console.error('Login error:', error);
-        showError('Lỗi kết nối: ' + error.message);
-    });
+        showError(error.message || 'Đăng nhập thất bại');
+    }
 }
 
 // ===== HANDLE REGISTER FORM SUBMISSION =====
-// Called from form onsubmit in HTML
 function handleRegisterSubmit(event) {
     event.preventDefault();
-    
+
     const fullname = document.getElementById('registerFullname').value.trim();
     const phone = document.getElementById('registerPhone').value.trim();
     const email = document.getElementById('registerEmail').value.trim();
     const password = document.getElementById('registerPassword').value.trim();
     const confirmPassword = document.getElementById('registerConfirmPassword').value.trim();
-    
-    // Validate
+
     if (!fullname || !phone || !password) {
         showError('Vui lòng nhập đầy đủ tên, số điện thoại và mật khẩu');
         return false;
     }
-    
+
     if (password.length < 6) {
         showError('Mật khẩu phải có ít nhất 6 ký tự');
         return false;
     }
-    
+
     if (password !== confirmPassword) {
         showError('Mật khẩu xác nhận không khớp');
         return false;
     }
-    
+
     performRegister(fullname, phone, password, email);
     return false;
 }
 
-function performRegister(fullname, phone, password, email) {
-    const errorEl = document.querySelector('.auth-error-message');
-    if (errorEl) errorEl.style.display = 'none';
-    
-    // CALL REGISTER API
-    fetch('http://localhost/btlWebbanhang/api/index.php?controller=auth&action=register', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ fullname, phone, password, email })
-    })
-    .then(response => response.json())
-    .then(result => {
-        if (result.success) {
-            // ✅ Switch to login tab first for a smooth UX
-            switchToLogin();
+async function performRegister(fullname, phone, password, email) {
+    clearAuthErrors();
 
-            // Clear register inputs safely (no form reset to avoid runtime errors)
-            const registerFields = [
-                'registerFullname',
-                'registerPhone',
-                'registerEmail',
-                'registerPassword',
-                'registerConfirmPassword'
-            ];
+    try {
+        await apiFetch(AUTH_REGISTER_API, {
+            method: 'POST',
+            body: JSON.stringify({ fullname, phone, password, email })
+        });
 
-            registerFields.forEach((id) => {
-                const el = document.getElementById(id);
-                if (el) el.value = '';
-            });
+        switchToLogin();
 
-            clearAuthErrors();
+        [
+            'registerFullname',
+            'registerPhone',
+            'registerEmail',
+            'registerPassword',
+            'registerConfirmPassword'
+        ].forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
 
-            // Show success message
-            showError('Đăng ký thành công!');
-
-        } else {
-            showError(result.message || 'Đăng ký thất bại');
-        }
-    })
-    .catch(error => {
+        showError('Đăng ký thành công!');
+    } catch (error) {
         console.error('Register error:', error);
-        showError('Lỗi kết nối: ' + error.message);
-    });
+        showError(error.message || 'Đăng ký thất bại');
+    }
 }
 
 // ===== SWITCH BETWEEN LOGIN/REGISTER TABS =====
@@ -228,13 +211,13 @@ function switchToLogin() {
     const registerTab = document.querySelector('.auth-tab-register');
     const loginForm = document.getElementById('loginForm');
     const registerForm = document.getElementById('registerForm');
-    
+
     if (loginTab) loginTab.classList.add('active');
     if (registerTab) registerTab.classList.remove('active');
-    
+
     if (loginForm) loginForm.style.display = 'block';
     if (registerForm) registerForm.style.display = 'none';
-    
+
     clearAuthErrors();
 }
 
@@ -243,31 +226,30 @@ function switchToRegister() {
     const registerTab = document.querySelector('.auth-tab-register');
     const loginForm = document.getElementById('loginForm');
     const registerForm = document.getElementById('registerForm');
-    
+
     if (loginTab) loginTab.classList.remove('active');
     if (registerTab) registerTab.classList.add('active');
-    
+
     if (loginForm) loginForm.style.display = 'none';
     if (registerForm) registerForm.style.display = 'block';
-    
+
     clearAuthErrors();
 }
 
 // ===== UPDATE HEADER UI AFTER LOGIN =====
 function updateHeaderUI(user) {
     const userActions = document.querySelector('.user-actions');
-    
+
     if (!userActions) return;
-    
-    // HTML structure for logged-in state
+
     userActions.innerHTML = `
         <div class="user-menu-wrapper">
             <div class="user-greeting">
                 <i class="fa-light fa-user-circle"></i>
-                <span class="greeting-text">${user.fullname || 'Tài khoản'}</span>
+                <span class="greeting-text">${escapeHtml(user.fullname || 'Tài khoản')}</span>
                 <i class="fa-light fa-caret-down"></i>
             </div>
-            
+
             <div class="user-dropdown-menu">
                 <a href="javascript:void(0)" class="user-menu-item" onclick="viewProfile()">
                     <i class="fa-light fa-user"></i> Thông tin tài khoản
@@ -285,8 +267,7 @@ function updateHeaderUI(user) {
             </div>
         </div>
     `;
-    
-    // Add click handler for dropdown
+
     const userGreeting = document.querySelector('.user-greeting');
     if (userGreeting) {
         userGreeting.addEventListener('click', toggleUserDropdown);
@@ -294,7 +275,7 @@ function updateHeaderUI(user) {
 }
 
 // ===== TOGGLE USER DROPDOWN MENU =====
-function toggleUserDropdown(e) {
+function toggleUserDropdown() {
     const menu = document.querySelector('.user-dropdown-menu');
     if (menu) {
         menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
@@ -303,50 +284,56 @@ function toggleUserDropdown(e) {
 
 // ===== USER PROFILE ACTIONS =====
 function viewProfile() {
-    const user = JSON.parse(localStorage.getItem('auth_user'));
-    console.log('User profile:', user);
+    const user = getCurrentUser();
+    if (!user) {
+        showLoginModal();
+        disablePageScroll();
+        return;
+    }
     alert(`Tên: ${user.fullname}\nSố điện thoại: ${user.phone}\nEmail: ${user.email || 'Chưa cập nhật'}`);
 }
 
-function changePassword() {
+async function changePassword() {
     const newPassword = prompt('Nhập mật khẩu mới (tối thiểu 6 ký tự):');
     if (!newPassword || newPassword.length < 6) {
         alert('Mật khẩu phải có ít nhất 6 ký tự');
         return;
     }
-    
+
     const oldPassword = prompt('Nhập mật khẩu hiện tại:');
     if (!oldPassword) return;
-    
-    const token = localStorage.getItem('auth_token');
-    
-    fetch('http://localhost/btlWebbanhang/api/index.php?controller=auth&action=change-password', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ old_password: oldPassword, new_password: newPassword })
-    })
-    .then(response => response.json())
-    .then(result => {
-        if (result.success) {
-            alert('✅ Đổi mật khẩu thành công!');
-        } else {
-            alert('❌ ' + (result.message || 'Đổi mật khẩu thất bại'));
+
+    try {
+        await apiFetch(AUTH_CHANGE_PASSWORD_API, {
+            method: 'POST',
+            body: JSON.stringify({ old_password: oldPassword, new_password: newPassword })
+        });
+        alert('Đổi mật khẩu thành công!');
+    } catch (error) {
+        if (isAuthError(error)) {
+            window.location.href = 'index.html';
+            return;
         }
-    })
-    .catch(error => {
         console.error('Password change error:', error);
-        alert('Lỗi kết nối: ' + error.message);
-    });
+        alert(error.message || 'Đổi mật khẩu thất bại');
+    }
 }
 
 // ===== LOGOUT =====
-function logout() {
-    if (confirm('Bạn có chắc chắn muốn đăng xuất?')) {
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('auth_user');
+async function logout() {
+    if (!confirm('Bạn có chắc chắn muốn đăng xuất?')) return;
+
+    try {
+        await apiFetch(AUTH_LOGOUT_API, {
+            method: 'POST',
+            body: JSON.stringify({})
+        });
+    } catch (error) {
+        if (!isAuthError(error)) {
+            console.warn('Logout API failed:', error);
+        }
+    } finally {
+        clearAuth();
         window.location.href = 'index.html';
     }
 }

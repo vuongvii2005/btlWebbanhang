@@ -98,7 +98,7 @@ function verifyJWT($token) {
     if ($signature !== $expectedSignature) return false;
     
     $data = json_decode(base64_decode($payload), true);
-    if ($data['exp'] < time()) return false;
+    if (!is_array($data) || empty($data['exp']) || $data['exp'] < time()) return false;
     
     return $data;
 }
@@ -106,19 +106,42 @@ function verifyJWT($token) {
 /**
  * Get user from JWT token (in Authorization header)
  */
-function getAuthUser() {
-    $headers = getallheaders();
-    $token = null;
-    
-    if (isset($headers['Authorization'])) {
-        $parts = explode(' ', $headers['Authorization']);
-        if (count($parts) === 2 && $parts[0] === 'Bearer') {
-            $token = $parts[1];
+function getAuthorizationHeader() {
+    $headers = function_exists('getallheaders') ? getallheaders() : [];
+
+    foreach ($headers as $name => $value) {
+        if (strtolower($name) === 'authorization') {
+            return $value;
         }
     }
-    
+
+    return $_SERVER['HTTP_AUTHORIZATION']
+        ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION']
+        ?? null;
+}
+
+function getBearerToken() {
+    $authorization = getAuthorizationHeader();
+    if (!$authorization) {
+        return null;
+    }
+
+    $parts = explode(' ', trim($authorization), 2);
+    if (count($parts) === 2 && strcasecmp($parts[0], 'Bearer') === 0) {
+        return $parts[1];
+    }
+
+    return null;
+}
+
+function hasBearerToken() {
+    return getBearerToken() !== null;
+}
+
+function getAuthUser() {
+    $token = getBearerToken();
     if (!$token) return null;
-    
+
     return verifyJWT($token);
 }
 

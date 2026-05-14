@@ -11,31 +11,14 @@ const currency = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: '
 let allOrders = [];
 let activeFilter = 'all';
 
-function escapeHtml(value) {
-    return String(value ?? '')
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#039;');
+async function requestJson(url, options = {}) {
+    const result = await apiFetch(url, options);
+    return result.data;
 }
 
-async function requestJson(url, options = {}) {
-    const response = await fetch(url, {
-        credentials: 'same-origin',
-        ...options,
-        headers: {
-            'Content-Type': 'application/json',
-            ...(options.headers || {})
-        }
-    });
-    const result = await response.json();
-    if (!result.success) {
-        const error = new Error(result.message || 'API Error');
-        error.code = result.code;
-        throw error;
-    }
-    return result.data;
+function redirectToLogin() {
+    clearAuth();
+    window.location.href = 'index.html';
 }
 
 function setMessage(message) {
@@ -164,13 +147,18 @@ async function loadHistory() {
     list.innerHTML = '';
     setMessage('Đang tải lịch sử mua hàng...');
 
+    if (!isLoggedIn()) {
+        redirectToLogin();
+        return;
+    }
+
     try {
         allOrders = await requestJson(`${HISTORY_API_BASE}/history.php`);
         setMessage('');
         renderOrders();
     } catch (error) {
-        if (error.code === 401) {
-            window.location.href = 'index.html';
+        if (isAuthError(error)) {
+            redirectToLogin();
             return;
         }
         setMessage(`Lỗi: ${escapeHtml(error.message)}`);
@@ -202,6 +190,10 @@ async function showOrderDetail(orderId) {
         `;
         document.getElementById('orderDetailModal').classList.add('open');
     } catch (error) {
+        if (isAuthError(error)) {
+            redirectToLogin();
+            return;
+        }
         alert(error.message);
     }
 }
@@ -216,6 +208,10 @@ async function cancelOrder(orderId) {
         });
         await loadHistory();
     } catch (error) {
+        if (isAuthError(error)) {
+            redirectToLogin();
+            return;
+        }
         alert(error.message);
     }
 }
@@ -232,7 +228,7 @@ function setupTabs() {
 }
 
 function setupHeaderUser() {
-    const user = JSON.parse(localStorage.getItem('auth_user') || 'null');
+    const user = getCurrentUser();
     const el = document.getElementById('historyUserName');
     if (el && user) {
         el.textContent = user.fullname || user.phone || '';

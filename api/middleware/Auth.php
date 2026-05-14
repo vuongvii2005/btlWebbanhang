@@ -28,10 +28,14 @@ class Auth {
         }
         
         // Try JWT from Authorization header
-        $user = getAuthUser();
-        if ($user) {
-            $this->user = $user;
-            return $user;
+        if (hasBearerToken()) {
+            $user = getAuthUser();
+            if ($user) {
+                $this->user = $user;
+                return $user;
+            }
+
+            return null;
         }
         
         // Try session

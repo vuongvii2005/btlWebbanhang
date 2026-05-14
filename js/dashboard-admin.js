@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost/btlWebbanhang/api/index.php';
+const API_URL = window.APP_API_URL || 'http://localhost/btlWebbanhang/api/index.php';
 const money = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' });
 const orderStatusLabels = {
     pending: 'Cho xac nhan',
@@ -17,9 +17,7 @@ let customers = [];
 async function api(controller, action, data = null, method = 'GET') {
     let url = `${API_URL}?controller=${controller}&action=${action}`;
     const options = {
-        method,
-        credentials: 'same-origin',
-        headers: {}
+        method
     };
 
     if (method === 'GET' && data) {
@@ -32,25 +30,10 @@ async function api(controller, action, data = null, method = 'GET') {
         const query = params.toString();
         if (query) url += `&${query}`;
     } else if (data) {
-        options.headers['Content-Type'] = 'application/json';
         options.body = JSON.stringify(data);
     }
 
-    const response = await fetch(url, options);
-    const result = await response.json();
-    if (!result.success) {
-        throw new Error(result.message || 'API Error');
-    }
-    return result;
-}
-
-function escapeHtml(value) {
-    return String(value ?? '')
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#039;');
+    return apiFetch(url, options);
 }
 
 function statusOptions(selected) {
@@ -61,14 +44,37 @@ function statusOptions(selected) {
         .join('');
 }
 
+function showAdminError(message) {
+    const el = document.getElementById('adminName');
+    if (el) el.textContent = message;
+}
+
+function handleAdminError(error) {
+    if (isAuthError(error)) {
+        clearAuth();
+        window.location.href = 'index.html';
+        return true;
+    }
+
+    console.error('Admin request failed:', error);
+    showAdminError(`Loi: ${error.message || 'Khong the tai du lieu'}`);
+    return false;
+}
+
 async function requireAdmin() {
+    if (!isLoggedIn()) {
+        clearAuth();
+        window.location.href = 'index.html';
+        return false;
+    }
+
     try {
         const result = await api('admin', 'me');
         document.getElementById('adminName').textContent = `Xin chao, ${result.data.fullname || 'Admin'}`;
+        return true;
     } catch (error) {
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('auth_user');
-        window.location.href = 'index.html';
+        handleAdminError(error);
+        return false;
     }
 }
 
@@ -232,32 +238,44 @@ function editProduct(id) {
 
 async function saveProduct(event) {
     event.preventDefault();
-    const id = document.getElementById('productId').value;
-    const data = {
-        id,
-        title: document.getElementById('productTitle').value.trim(),
-        price: document.getElementById('productPrice').value,
-        category_id: document.getElementById('productCategory').value,
-        image_url: document.getElementById('productImage').value.trim(),
-        status: document.getElementById('productStatus').value,
-        description: document.getElementById('productDescription').value.trim()
-    };
-    await api('product', id ? 'update' : 'create', data, 'POST');
-    resetProductForm();
-    await Promise.all([loadProducts(), loadDashboard()]);
+    try {
+        const id = document.getElementById('productId').value;
+        const data = {
+            id,
+            title: document.getElementById('productTitle').value.trim(),
+            price: document.getElementById('productPrice').value,
+            category_id: document.getElementById('productCategory').value,
+            image_url: document.getElementById('productImage').value.trim(),
+            status: document.getElementById('productStatus').value,
+            description: document.getElementById('productDescription').value.trim()
+        };
+        await api('product', id ? 'update' : 'create', data, 'POST');
+        resetProductForm();
+        await Promise.all([loadProducts(), loadDashboard()]);
+    } catch (error) {
+        handleAdminError(error);
+    }
 }
 
 async function toggleProductStatus(id) {
-    const product = products.find((item) => Number(item.id) === Number(id));
-    if (!product) return;
-    await api('product', 'update', { id, status: Number(product.status) === 1 ? 0 : 1 }, 'POST');
-    await Promise.all([loadProducts(), loadDashboard()]);
+    try {
+        const product = products.find((item) => Number(item.id) === Number(id));
+        if (!product) return;
+        await api('product', 'update', { id, status: Number(product.status) === 1 ? 0 : 1 }, 'POST');
+        await Promise.all([loadProducts(), loadDashboard()]);
+    } catch (error) {
+        handleAdminError(error);
+    }
 }
 
 async function deleteProduct(id) {
     if (!confirm('Xoa mon an nay? Mon se chuyen sang trang thai ngung ban.')) return;
-    await api('product', 'delete', { id }, 'POST');
-    await Promise.all([loadProducts(), loadDashboard()]);
+    try {
+        await api('product', 'delete', { id }, 'POST');
+        await Promise.all([loadProducts(), loadDashboard()]);
+    } catch (error) {
+        handleAdminError(error);
+    }
 }
 
 function resetCategoryForm() {
@@ -278,42 +296,58 @@ function editCategory(id) {
 
 async function saveCategory(event) {
     event.preventDefault();
-    const id = document.getElementById('categoryId').value;
-    const data = {
-        id,
-        name: document.getElementById('categoryName').value.trim(),
-        description: document.getElementById('categoryDescription').value.trim(),
-        display_order: document.getElementById('categoryOrder').value || 0
-    };
-    await api('admin', id ? 'category-update' : 'category-create', data, 'POST');
-    resetCategoryForm();
-    await loadCategories();
+    try {
+        const id = document.getElementById('categoryId').value;
+        const data = {
+            id,
+            name: document.getElementById('categoryName').value.trim(),
+            description: document.getElementById('categoryDescription').value.trim(),
+            display_order: document.getElementById('categoryOrder').value || 0
+        };
+        await api('admin', id ? 'category-update' : 'category-create', data, 'POST');
+        resetCategoryForm();
+        await loadCategories();
+    } catch (error) {
+        handleAdminError(error);
+    }
 }
 
 async function deleteCategory(id) {
     if (!confirm('Xoa danh muc nay?')) return;
-    await api('admin', 'category-delete', { id }, 'POST');
-    await loadCategories();
+    try {
+        await api('admin', 'category-delete', { id }, 'POST');
+        await loadCategories();
+    } catch (error) {
+        handleAdminError(error);
+    }
 }
 
 async function showOrderDetail(id) {
-    const result = await api('orders', 'admin-detail', { id });
-    const order = result.data;
-    const itemsHtml = (order.items || []).map((item) => `
-        <li>${escapeHtml(item.title)} x ${item.quantity} - ${money.format(item.price * item.quantity)}</li>
-    `).join('');
-    document.getElementById('orderDetail').innerHTML = `
-        <h3>Don hang #${order.id}</h3>
-        <p><strong>Khach:</strong> ${escapeHtml(order.customer_name)} - ${escapeHtml(order.customer_phone)}</p>
-        <p><strong>Dia chi:</strong> ${escapeHtml(order.customer_address)}</p>
-        <p><strong>Ghi chu:</strong> ${escapeHtml(order.notes)}</p>
-        <ul>${itemsHtml}</ul>
-    `;
+    try {
+        const result = await api('orders', 'admin-detail', { id });
+        const order = result.data;
+        const itemsHtml = (order.items || []).map((item) => `
+            <li>${escapeHtml(item.title)} x ${item.quantity} - ${money.format(item.price * item.quantity)}</li>
+        `).join('');
+        document.getElementById('orderDetail').innerHTML = `
+            <h3>Don hang #${order.id}</h3>
+            <p><strong>Khach:</strong> ${escapeHtml(order.customer_name)} - ${escapeHtml(order.customer_phone)}</p>
+            <p><strong>Dia chi:</strong> ${escapeHtml(order.customer_address)}</p>
+            <p><strong>Ghi chu:</strong> ${escapeHtml(order.notes)}</p>
+            <ul>${itemsHtml}</ul>
+        `;
+    } catch (error) {
+        handleAdminError(error);
+    }
 }
 
 async function updateOrderStatus(id, status) {
-    await api('orders', 'update-status', { id, status }, 'POST');
-    await Promise.all([loadOrders(document.getElementById('orderSearch').value.trim()), loadDashboard()]);
+    try {
+        await api('orders', 'update-status', { id, status }, 'POST');
+        await Promise.all([loadOrders(document.getElementById('orderSearch').value.trim()), loadDashboard()]);
+    } catch (error) {
+        handleAdminError(error);
+    }
 }
 
 function viewCustomer(id) {
@@ -323,10 +357,14 @@ function viewCustomer(id) {
 }
 
 async function toggleCustomerStatus(id) {
-    const customer = customers.find((item) => Number(item.id) === Number(id));
-    if (!customer) return;
-    await api('admin', 'customer-status', { id, status: Number(customer.status) === 1 ? 0 : 1 }, 'POST');
-    await loadCustomers();
+    try {
+        const customer = customers.find((item) => Number(item.id) === Number(id));
+        if (!customer) return;
+        await api('admin', 'customer-status', { id, status: Number(customer.status) === 1 ? 0 : 1 }, 'POST');
+        await loadCustomers();
+    } catch (error) {
+        handleAdminError(error);
+    }
 }
 
 async function logoutAdmin() {
@@ -335,8 +373,7 @@ async function logoutAdmin() {
     } catch (error) {
         // Local cleanup still matters if the session already expired.
     }
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('auth_user');
+    clearAuth();
     window.location.href = 'index.html';
 }
 
@@ -348,14 +385,22 @@ function setupForms() {
     document.getElementById('logoutBtn').addEventListener('click', logoutAdmin);
     document.getElementById('orderSearch').addEventListener('input', (event) => {
         clearTimeout(window.orderSearchTimer);
-        window.orderSearchTimer = setTimeout(() => loadOrders(event.target.value.trim()), 250);
+        window.orderSearchTimer = setTimeout(() => {
+            loadOrders(event.target.value.trim()).catch(handleAdminError);
+        }, 250);
     });
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-    setupNavigation();
-    setupForms();
-    await requireAdmin();
-    await loadCategories();
-    await Promise.all([loadDashboard(), loadProducts(), loadOrders(), loadCustomers()]);
+    try {
+        setupNavigation();
+        setupForms();
+        const canAccess = await requireAdmin();
+        if (!canAccess) return;
+
+        await loadCategories();
+        await Promise.all([loadDashboard(), loadProducts(), loadOrders(), loadCustomers()]);
+    } catch (error) {
+        handleAdminError(error);
+    }
 });
