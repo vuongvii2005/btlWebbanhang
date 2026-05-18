@@ -1,12 +1,12 @@
 const API_URL = window.APP_API_URL || 'http://localhost/btlWebbanhang/api/index.php';
 const money = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' });
 const orderStatusLabels = {
-    pending: 'Cho xac nhan',
-    confirmed: 'Da xac nhan',
-    shipping: 'Dang giao',
-    completed: 'Hoan thanh',
-    delivered: 'Hoan thanh',
-    cancelled: 'Da huy'
+    pending: 'Chờ xác nhận',
+    confirmed: 'Đã xác nhận',
+    shipping: 'Đang giao',
+    completed: 'Hoàn thành',
+    delivered: 'Hoàn thành',
+    cancelled: 'Đã hủy'
 };
 
 let categories = [];
@@ -57,7 +57,7 @@ function handleAdminError(error) {
     }
 
     console.error('Admin request failed:', error);
-    showAdminError(`Loi: ${error.message || 'Khong the tai du lieu'}`);
+    showAdminError(`Lỗi: ${error.message || 'Không thể tải dữ liệu'}`);
     return false;
 }
 
@@ -70,7 +70,7 @@ async function requireAdmin() {
 
     try {
         const result = await api('admin', 'me');
-        document.getElementById('adminName').textContent = `Xin chao, ${result.data.fullname || 'Admin'}`;
+        document.getElementById('adminName').textContent = `Xin chào, ${result.data.fullname || 'Admin'}`;
         return true;
     } catch (error) {
         handleAdminError(error);
@@ -121,7 +121,7 @@ async function loadCategories() {
 
 function renderCategorySelect() {
     const select = document.getElementById('productCategory');
-    select.innerHTML = '<option value="">Chon danh muc</option>' + categories.map((category) => (
+    select.innerHTML = '<option value="">Chọn danh mục</option>' + categories.map((category) => (
         `<option value="${category.id}">${escapeHtml(category.name)}</option>`
     )).join('');
 }
@@ -135,8 +135,8 @@ function renderCategories() {
             <td>${category.display_order || 0}</td>
             <td>
                 <div class="row-actions">
-                    <button class="small-btn" onclick="editCategory(${category.id})">Sua</button>
-                    <button class="danger-btn" onclick="deleteCategory(${category.id})">Xoa</button>
+                    <button class="small-btn" onclick="editCategory(${category.id})">Sửa</button>
+                    <button class="danger-btn" onclick="deleteCategory(${category.id})">Xóa</button>
                 </div>
             </td>
         </tr>
@@ -156,12 +156,12 @@ function renderProducts() {
             <td>${escapeHtml(product.title)}<br><small>${escapeHtml(product.description).slice(0, 90)}</small></td>
             <td>${escapeHtml(product.category_name || '')}</td>
             <td>${money.format(product.price)}</td>
-            <td><span class="status-pill ${Number(product.status) === 1 ? 'status-on' : 'status-off'}">${Number(product.status) === 1 ? 'Con ban' : 'Ngung ban'}</span></td>
+            <td><span class="status-pill ${Number(product.status) === 1 ? 'status-on' : 'status-off'}">${Number(product.status) === 1 ? 'Còn bán' : 'Ngừng bán'}</span></td>
             <td>
                 <div class="row-actions">
-                    <button class="small-btn" onclick="editProduct(${product.id})">Sua</button>
-                    <button class="small-btn" onclick="toggleProductStatus(${product.id})">${Number(product.status) === 1 ? 'Ngung ban' : 'Mo ban'}</button>
-                    <button class="danger-btn" onclick="deleteProduct(${product.id})">Xoa</button>
+                    <button class="small-btn" onclick="editProduct(${product.id})">Sửa</button>
+                    <button class="small-btn" onclick="toggleProductStatus(${product.id})">${Number(product.status) === 1 ? 'Ngừng bán' : 'Mở bán'}</button>
+                    <button class="danger-btn" onclick="deleteProduct(${product.id})">Xóa</button>
                 </div>
             </td>
         </tr>
@@ -187,7 +187,7 @@ function renderOrders() {
                 </select>
             </td>
             <td>${escapeHtml(order.created_at)}</td>
-            <td><button class="small-btn" onclick="showOrderDetail(${order.id})">Chi tiet</button></td>
+            <td><button class="small-btn" onclick="showOrderDetail(${order.id})">Chi tiết</button></td>
         </tr>
     `).join('');
 }
@@ -205,12 +205,12 @@ function renderCustomers() {
             <td>${escapeHtml(customer.fullname)}</td>
             <td>${escapeHtml(customer.phone)}</td>
             <td>${escapeHtml(customer.email)}</td>
-            <td><span class="status-pill ${Number(customer.status) === 1 ? 'status-on' : 'status-off'}">${Number(customer.status) === 1 ? 'Dang mo' : 'Da khoa'}</span></td>
+            <td><span class="status-pill ${Number(customer.status) === 1 ? 'status-on' : 'status-off'}">${Number(customer.status) === 1 ? 'Đang mở' : 'Đã khóa'}</span></td>
             <td>${escapeHtml(customer.created_at)}</td>
             <td>
                 <div class="row-actions">
                     <button class="small-btn" onclick="viewCustomer(${customer.id})">Xem</button>
-                    <button class="small-btn" onclick="toggleCustomerStatus(${customer.id})">${Number(customer.status) === 1 ? 'Khoa' : 'Mo khoa'}</button>
+                    <button class="small-btn" onclick="toggleCustomerStatus(${customer.id})">${Number(customer.status) === 1 ? 'Khóa' : 'Mở khóa'}</button>
                 </div>
             </td>
         </tr>
@@ -269,7 +269,7 @@ async function toggleProductStatus(id) {
 }
 
 async function deleteProduct(id) {
-    if (!confirm('Xoa mon an nay? Mon se chuyen sang trang thai ngung ban.')) return;
+    if (!confirm('Xóa món ăn này? Món sẽ chuyển sang trạng thái ngừng bán.')) return;
     try {
         await api('product', 'delete', { id }, 'POST');
         await Promise.all([loadProducts(), loadDashboard()]);
@@ -313,7 +313,7 @@ async function saveCategory(event) {
 }
 
 async function deleteCategory(id) {
-    if (!confirm('Xoa danh muc nay?')) return;
+    if (!confirm('Xóa danh mục này?')) return;
     try {
         await api('admin', 'category-delete', { id }, 'POST');
         await loadCategories();
@@ -330,10 +330,10 @@ async function showOrderDetail(id) {
             <li>${escapeHtml(item.title)} x ${item.quantity} - ${money.format(item.price * item.quantity)}</li>
         `).join('');
         document.getElementById('orderDetail').innerHTML = `
-            <h3>Don hang #${order.id}</h3>
-            <p><strong>Khach:</strong> ${escapeHtml(order.customer_name)} - ${escapeHtml(order.customer_phone)}</p>
-            <p><strong>Dia chi:</strong> ${escapeHtml(order.customer_address)}</p>
-            <p><strong>Ghi chu:</strong> ${escapeHtml(order.notes)}</p>
+            <h3>Đơn hàng #${order.id}</h3>
+            <p><strong>Khách:</strong> ${escapeHtml(order.customer_name)} - ${escapeHtml(order.customer_phone)}</p>
+            <p><strong>Địa chỉ:</strong> ${escapeHtml(order.customer_address)}</p>
+            <p><strong>Ghi chú:</strong> ${escapeHtml(order.notes)}</p>
             <ul>${itemsHtml}</ul>
         `;
     } catch (error) {
@@ -353,7 +353,7 @@ async function updateOrderStatus(id, status) {
 function viewCustomer(id) {
     const customer = customers.find((item) => Number(item.id) === Number(id));
     if (!customer) return;
-    alert(`Ten: ${customer.fullname}\nSDT: ${customer.phone}\nEmail: ${customer.email || ''}\nDia chi: ${customer.address || ''}`);
+    alert(`Tên: ${customer.fullname}\nSĐT: ${customer.phone}\nEmail: ${customer.email || ''}\nĐịa chỉ: ${customer.address || ''}`);
 }
 
 async function toggleCustomerStatus(id) {

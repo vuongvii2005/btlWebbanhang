@@ -31,8 +31,8 @@ async function checkLogin() {
         clearAuthErrors();
         updateHeaderUI(user);
 
-        if (user.role === 'admin' && !window.location.pathname.endsWith('/dashboard.html')) {
-            window.location.href = 'dashboard.html';
+        if (user.role === 'admin' && !window.location.pathname.endsWith('/admin.html')) {
+            window.location.href = 'admin.html';
         }
     } catch (error) {
         if (isAuthError(error)) {
@@ -139,7 +139,7 @@ async function performLogin(identifier, password) {
         clearAuthErrors();
 
         if (result.data.user.role === 'admin') {
-            window.location.href = 'dashboard.html';
+            window.location.href = 'admin.html';
         }
     } catch (error) {
         console.error('Login error:', error);
