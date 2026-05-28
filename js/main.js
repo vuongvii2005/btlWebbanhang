@@ -1,5 +1,6 @@
 // 🔌 API Configuration
 const API_URL = 'http://localhost/btlWebbanhang/api/index.php';
+const FAVORITE_API_URL = `${window.APP_API_URL || API_URL}?controller=favorite`;
 
 // 📡 API Helper Function
 async function apiCall(controller, action, data = null, method = 'GET', token = null) {
@@ -235,6 +236,72 @@ const detailModal = document.getElementById('productDetailModal');
 const modalContent = document.getElementById('modalContent');
 const closeModalBtn = document.getElementById('closeModalBtn'); // Nút đóng modal
 
+function setFavoriteButtonState(isFavorite, isLoading = false) {
+    const favoriteBtn = document.getElementById('favoriteToggleBtn');
+    if (!favoriteBtn) return;
+
+    favoriteBtn.classList.toggle('is-favorite', isFavorite);
+    favoriteBtn.classList.toggle('is-loading', isLoading);
+    favoriteBtn.disabled = isLoading;
+    favoriteBtn.setAttribute('aria-pressed', String(isFavorite));
+
+    if (isLoading) {
+        favoriteBtn.innerHTML = `<i class="${isFavorite ? 'fa-solid' : 'fa-light'} fa-heart"></i>`;
+        return;
+    }
+
+    favoriteBtn.title = isFavorite ? 'Bỏ khỏi món yêu thích' : 'Thêm vào món yêu thích';
+    favoriteBtn.setAttribute('aria-label', favoriteBtn.title);
+    favoriteBtn.innerHTML = `
+        <i class="${isFavorite ? 'fa-solid' : 'fa-light'} fa-heart"></i>
+    `;
+}
+
+async function loadFavoriteStatus(productId) {
+    if (!isLoggedIn()) {
+        setFavoriteButtonState(false);
+        return;
+    }
+
+    try {
+        const result = await apiFetch(`${FAVORITE_API_URL}&action=status&product_id=${encodeURIComponent(productId)}`);
+        setFavoriteButtonState(Boolean(result.data?.is_favorite));
+    } catch (error) {
+        console.warn('Không thể tải trạng thái yêu thích:', error);
+        setFavoriteButtonState(false);
+    }
+}
+
+async function toggleFavorite(productId) {
+    if (!isLoggedIn()) {
+        if (typeof showLoginModal === 'function') showLoginModal();
+        if (typeof disablePageScroll === 'function') disablePageScroll();
+        return;
+    }
+
+    const favoriteBtn = document.getElementById('favoriteToggleBtn');
+    const wasFavorite = favoriteBtn?.classList.contains('is-favorite') || false;
+    setFavoriteButtonState(wasFavorite, true);
+
+    try {
+        const result = await apiFetch(`${FAVORITE_API_URL}&action=toggle`, {
+            method: 'POST',
+            body: JSON.stringify({ product_id: productId })
+        });
+        setFavoriteButtonState(Boolean(result.data?.is_favorite));
+    } catch (error) {
+        setFavoriteButtonState(wasFavorite);
+
+        if (isAuthError(error)) {
+            if (typeof showLoginModal === 'function') showLoginModal();
+            if (typeof disablePageScroll === 'function') disablePageScroll();
+            return;
+        }
+
+        alert(error.message || 'Không thể cập nhật món yêu thích.');
+    }
+}
+
 // Hàm hiển thị chi tiết sản phẩm
 function detailProduct(productId) {
     // 1. Tìm sản phẩm theo ID
@@ -251,7 +318,12 @@ function detailProduct(productId) {
                 
             </div>
             <div class="modal-info">
-                <h2 class="modal-title">${product.title}</h2>
+                <div class="modal-heading-row">
+                    <h2 class="modal-title">${product.title}</h2>
+                    <button id="favoriteToggleBtn" class="favorite-toggle-btn" type="button" onclick="toggleFavorite(${product.id})" aria-pressed="false" aria-label="Thêm vào món yêu thích" title="Thêm vào món yêu thích">
+                        <i class="fa-light fa-heart"></i>
+                    </button>
+                </div>
                 <div class="modal-info-bao">
                     <p class="modal-price">${formattedPrice} <span class="unit"></span></p>
                     <div class="modal-quantity">
@@ -286,6 +358,7 @@ function detailProduct(productId) {
         document.body.style.overflow = 'hidden'; // Ngăn cuộn trang nền
 
         document.getElementById('quantityInput').dataset.price = product.price; // Lưu giá gốc
+        loadFavoriteStatus(product.id);
     } else {
         console.error("Không tìm thấy sản phẩm với ID: " + productId);
     }
