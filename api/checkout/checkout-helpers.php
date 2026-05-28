@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/../user/welcome-coupon-helper.php';
+
 function checkoutRequireAuthenticatedUser() {
     if (hasBearerToken()) {
         $tokenUser = getAuthUser();
@@ -131,6 +133,17 @@ function checkoutFindCoupon(PDO $pdo, $userId, $couponCode, $forUpdate = false) 
         return null;
     }
 
+    $normalizedCouponCode = strtoupper($couponCode);
+    $welcomeCouponCode = defined('WELCOME_COUPON_CODE') ? WELCOME_COUPON_CODE : '';
+    $expectedWelcomeCode = $welcomeCouponCode . '-U' . (int)$userId;
+
+    if ($welcomeCouponCode !== '' && in_array($normalizedCouponCode, [$welcomeCouponCode, $expectedWelcomeCode], true)) {
+        $welcomeCoupon = welcomeCouponEnsureForUser($pdo, $userId);
+        if ($welcomeCoupon && $normalizedCouponCode === $welcomeCouponCode) {
+            $couponCode = $welcomeCoupon['coupon_code'];
+        }
+    }
+
     $sql = "SELECT
                 uc.id AS user_coupon_id,
                 uc.user_id,
@@ -150,7 +163,10 @@ function checkoutFindCoupon(PDO $pdo, $userId, $couponCode, $forUpdate = false) 
                 c.used_count,
                 c.start_date,
                 c.end_date,
-                c.status
+                c.status,
+                (uc.expired_at IS NULL OR uc.expired_at >= NOW()) AS user_coupon_not_expired,
+                (c.start_date IS NULL OR c.start_date <= NOW()) AS coupon_has_started,
+                (c.end_date IS NULL OR c.end_date >= NOW()) AS coupon_not_ended
             FROM user_coupons uc
             INNER JOIN coupons c ON c.id = uc.coupon_id
             WHERE uc.user_id = ?
@@ -180,7 +196,6 @@ function checkoutCalculateCouponDiscount($coupon, $subtotal, $baseShippingFee) {
         ];
     }
 
-    $now = time();
     $discountType = $coupon['discount_type'];
     $discountValue = (float)$coupon['discount_value'];
     $maxDiscount = $coupon['max_discount_amount'] !== null ? (float)$coupon['max_discount_amount'] : null;
@@ -190,7 +205,7 @@ function checkoutCalculateCouponDiscount($coupon, $subtotal, $baseShippingFee) {
         throw new Exception('Mã giảm giá đã được sử dụng.');
     }
 
-    if (!empty($coupon['expired_at']) && strtotime($coupon['expired_at']) < $now) {
+    if (isset($coupon['user_coupon_not_expired']) && (int)$coupon['user_coupon_not_expired'] !== 1) {
         throw new Exception('Mã giảm giá đã hết hạn.');
     }
 
@@ -198,11 +213,11 @@ function checkoutCalculateCouponDiscount($coupon, $subtotal, $baseShippingFee) {
         throw new Exception('Mã giảm giá hiện không khả dụng.');
     }
 
-    if (!empty($coupon['start_date']) && strtotime($coupon['start_date']) > $now) {
+    if (isset($coupon['coupon_has_started']) && (int)$coupon['coupon_has_started'] !== 1) {
         throw new Exception('Mã giảm giá chưa đến thời gian sử dụng.');
     }
 
-    if (!empty($coupon['end_date']) && strtotime($coupon['end_date']) < $now) {
+    if (isset($coupon['coupon_not_ended']) && (int)$coupon['coupon_not_ended'] !== 1) {
         throw new Exception('Mã giảm giá đã hết hạn.');
     }
 
@@ -304,11 +319,15 @@ function checkoutMaybeSaveUserInfo(PDO $pdo, $userId, $customerName, $email, $ad
         return;
     }
 
-    $updates = ['fullname = ?', 'address = ?'];
+    $updates = ['fullname = ?'];
     $values = [
-        sanitizeString($customerName),
-        sanitizeString($address)
+        sanitizeString($customerName)
     ];
+
+    if ($address !== null) {
+        $updates[] = 'address = ?';
+        $values[] = sanitizeString($address);
+    }
 
     if (trim((string)$email) !== '') {
         $updates[] = 'email = ?';

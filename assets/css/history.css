@@ -254,6 +254,10 @@ body {
     line-height: 1.4;
 }
 
+.order-discount-field strong {
+    color: #16803a;
+}
+
 .order-price {
     color: var(--history-red);
     font-size: 26px;
@@ -422,6 +426,29 @@ body {
     height: 58px;
     object-fit: cover;
     border-radius: 12px;
+}
+
+.detail-totals {
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid var(--history-line);
+}
+
+.detail-totals p {
+    display: flex;
+    justify-content: space-between;
+    gap: 18px;
+    margin: 8px 0;
+}
+
+.detail-coupon-code,
+.detail-discount {
+    color: #16803a;
+}
+
+.detail-grand-total {
+    font-size: 20px;
+    color: var(--history-red);
 }
 
 @media (max-width: 1020px) {

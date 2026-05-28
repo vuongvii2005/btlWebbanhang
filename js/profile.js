@@ -1,4 +1,6 @@
 const PROFILE_API_URL = 'api/profile.php';
+const PROFILE_COUPONS_API = 'api/user/coupons.php';
+const PROFILE_REDEEM_COUPON_API = 'api/user/redeem_coupon.php';
 const AUTH_LOGOUT_URL = `${window.APP_API_URL}?controller=auth&action=logout`;
 const AUTH_CHANGE_PASSWORD_URL = `${window.APP_API_URL}?controller=auth&action=change-password`;
 const DEFAULT_AVATAR = 'assets/img/avt_mac_dinh.jpg';
@@ -9,7 +11,13 @@ const AVATAR_ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
 const profileState = {
     user: null,
     stats: null,
-    recentOrders: []
+    recentOrders: [],
+    coupons: {
+        points: 0,
+        userCoupons: [],
+        availableCoupons: [],
+        activeTab: 'mine'
+    }
 };
 
 let selectedAvatarFile = null;
@@ -173,6 +181,331 @@ function renderStats(stats = {}) {
     document.getElementById('totalOrders').textContent = formatNumber(stats.total_orders);
     document.getElementById('favoriteCount').textContent = formatNumber(stats.favorite_count);
     document.getElementById('rewardPoints').textContent = formatNumber(stats.points);
+}
+
+function setCouponMessage(message = '', type = '') {
+    const el = document.getElementById('couponProfileMessage');
+    if (!el) return;
+
+    el.textContent = message;
+    el.className = 'coupon-profile-message';
+
+    if (message) {
+        el.classList.add('show');
+        if (type) el.classList.add(type);
+    }
+}
+
+function formatCouponDate(value) {
+    return formatDate(value) || 'Không giới hạn';
+}
+
+function formatCouponMoney(value) {
+    return currencyFormatter.format(Number(value || 0));
+}
+
+function formatCouponBenefit(coupon = {}) {
+    const type = coupon.discount_type;
+    const value = Number(coupon.discount_value || 0);
+    const maxDiscount = Number(coupon.max_discount_amount || 0);
+
+    if (type === 'freeship') {
+        return 'Miễn phí giao hàng';
+    }
+
+    if (type === 'percent') {
+        return maxDiscount > 0
+            ? `Giảm ${value}% tối đa ${formatCouponMoney(maxDiscount)}`
+            : `Giảm ${value}%`;
+    }
+
+    return `Giảm ${formatCouponMoney(value)}`;
+}
+
+function formatCouponCondition(coupon = {}) {
+    const minAmount = Number(coupon.min_order_amount || 0);
+    return minAmount > 0 ? `Đơn từ ${formatCouponMoney(minAmount)}` : 'Không yêu cầu đơn tối thiểu';
+}
+
+function couponIconClass(coupon = {}) {
+    if (coupon.discount_type === 'freeship') return 'fa-truck-fast';
+    if (coupon.discount_type === 'percent') return 'fa-gift';
+    return 'fa-badge-percent';
+}
+
+function renderCouponPoints(points = 0) {
+    const formattedPoints = formatNumber(points);
+    const couponPoints = document.getElementById('couponPoints');
+    const rewardPoints = document.getElementById('rewardPoints');
+
+    if (couponPoints) couponPoints.textContent = formattedPoints;
+    if (rewardPoints) rewardPoints.textContent = formattedPoints;
+}
+
+function renderMyCoupons(coupons = []) {
+    const list = document.getElementById('myCouponsList');
+    if (!list) return;
+
+    if (!coupons.length) {
+        list.innerHTML = `
+            <div class="coupon-empty-state">
+                <i class="fa-light fa-ticket"></i>
+                <strong>Bạn chưa có mã giảm giá nào</strong>
+                <span>Hãy đổi điểm để nhận ưu đãi từ VY FOOD</span>
+            </div>
+        `;
+        return;
+    }
+
+    list.innerHTML = `
+        <div class="voucher-grid">
+            ${coupons.map((coupon) => {
+                const statusCode = coupon.status_code || 'expired';
+                const canUse = Boolean(coupon.can_use);
+                const code = coupon.coupon_code || coupon.code || '';
+
+                return `
+                    <article class="voucher-card ${escapeHtml(statusCode)}">
+                        <div class="voucher-ribbon">
+                            <i class="fa-light ${couponIconClass(coupon)}"></i>
+                        </div>
+                        <div class="voucher-body">
+                            <div class="voucher-topline">
+                                <strong class="voucher-code">${escapeHtml(code)}</strong>
+                                <span class="voucher-status ${escapeHtml(statusCode)}">${escapeHtml(coupon.status_label || 'Hết hạn')}</span>
+                            </div>
+                            <h3>${escapeHtml(coupon.title || formatCouponBenefit(coupon))}</h3>
+                            <p>${escapeHtml(coupon.description || `${formatCouponBenefit(coupon)} - ${formatCouponCondition(coupon)}`)}</p>
+                            <div class="voucher-meta">
+                                <span>${escapeHtml(formatCouponCondition(coupon))}</span>
+                                <span>Hạn dùng: ${escapeHtml(formatCouponDate(coupon.expires_at))}</span>
+                            </div>
+                            <div class="voucher-actions">
+                                <button class="voucher-btn light" type="button" data-copy-code="${escapeHtml(code)}">
+                                    <i class="fa-light fa-copy"></i>
+                                    Copy mã
+                                </button>
+                                <button class="voucher-btn primary" type="button" data-use-code="${escapeHtml(code)}" ${canUse ? '' : 'disabled'}>
+                                    Dùng ngay
+                                </button>
+                            </div>
+                        </div>
+                    </article>
+                `;
+            }).join('')}
+        </div>
+    `;
+}
+
+function exchangeButtonLabel(coupon = {}) {
+    if (coupon.redeem_status === 'not_enough_points') return 'Không đủ điểm';
+    if (coupon.redeem_status === 'limit_reached') return 'Đã đổi';
+    return 'Đổi mã';
+}
+
+function renderExchangeCoupons(coupons = []) {
+    const list = document.getElementById('exchangeCouponsList');
+    if (!list) return;
+
+    if (!coupons.length) {
+        list.innerHTML = `
+            <div class="coupon-empty-state">
+                <i class="fa-light fa-gift"></i>
+                <strong>Hiện chưa có mã có thể đổi</strong>
+                <span>VY FOOD sẽ cập nhật ưu đãi mới trong thời gian tới</span>
+            </div>
+        `;
+        return;
+    }
+
+    list.innerHTML = `
+        <div class="exchange-grid">
+            ${coupons.map((coupon) => {
+                const canRedeem = Boolean(coupon.can_redeem);
+
+                return `
+                    <article class="exchange-card">
+                        <span class="exchange-icon">
+                            <i class="fa-light ${couponIconClass(coupon)}"></i>
+                        </span>
+                        <div class="exchange-content">
+                            <h3>${escapeHtml(coupon.title || formatCouponBenefit(coupon))}</h3>
+                            <p>${escapeHtml(coupon.description || formatCouponCondition(coupon))}</p>
+                            <div class="exchange-meta">
+                                <span>Cần ${formatNumber(coupon.points_required)} điểm</span>
+                                <span>${escapeHtml(formatCouponCondition(coupon))}</span>
+                                <span>Hạn đổi: ${escapeHtml(formatCouponDate(coupon.end_date))}</span>
+                            </div>
+                        </div>
+                        <button class="voucher-btn primary exchange-redeem-btn" type="button" data-redeem-coupon="${Number(coupon.id)}" ${canRedeem ? '' : 'disabled'}>
+                            ${exchangeButtonLabel(coupon)}
+                        </button>
+                    </article>
+                `;
+            }).join('')}
+        </div>
+    `;
+}
+
+function renderCouponTabs() {
+    document.querySelectorAll('[data-coupon-tab]').forEach((button) => {
+        const isActive = button.dataset.couponTab === profileState.coupons.activeTab;
+        button.classList.toggle('active', isActive);
+        button.setAttribute('aria-selected', String(isActive));
+    });
+
+    const myPanel = document.getElementById('myCouponsPanel');
+    const exchangePanel = document.getElementById('exchangeCouponsPanel');
+    const showExchange = profileState.coupons.activeTab === 'exchange';
+
+    if (myPanel) {
+        myPanel.hidden = showExchange;
+        myPanel.classList.toggle('active', !showExchange);
+    }
+
+    if (exchangePanel) {
+        exchangePanel.hidden = !showExchange;
+        exchangePanel.classList.toggle('active', showExchange);
+    }
+}
+
+function renderCoupons(payload = {}) {
+    const points = Number(payload.points?.points || 0);
+    profileState.coupons.points = points;
+    profileState.coupons.userCoupons = payload.user_coupons || [];
+    profileState.coupons.availableCoupons = payload.available_coupons || [];
+
+    renderCouponPoints(points);
+    renderMyCoupons(profileState.coupons.userCoupons);
+    renderExchangeCoupons(profileState.coupons.availableCoupons);
+    renderCouponTabs();
+}
+
+function setCouponsLoading() {
+    document.getElementById('myCouponsList').innerHTML = '<div class="coupon-loading">Đang tải mã giảm giá...</div>';
+    document.getElementById('exchangeCouponsList').innerHTML = '<div class="coupon-loading">Đang tải ưu đãi có thể đổi...</div>';
+}
+
+async function loadCoupons() {
+    if (!isLoggedIn()) {
+        redirectToLogin();
+        return;
+    }
+
+    setCouponsLoading();
+
+    try {
+        const result = await apiFetch(PROFILE_COUPONS_API);
+        renderCoupons(result.data || {});
+        setCouponMessage('');
+    } catch (error) {
+        if (isAuthError(error)) {
+            redirectToLogin();
+            return;
+        }
+
+        setCouponMessage(getErrorMessage(error, 'Không thể tải mã giảm giá.'), 'error');
+        renderMyCoupons([]);
+        renderExchangeCoupons([]);
+    }
+}
+
+async function copyCouponCode(code) {
+    if (!code) return;
+
+    try {
+        if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(code);
+        } else {
+            const textarea = document.createElement('textarea');
+            textarea.value = code;
+            textarea.setAttribute('readonly', '');
+            textarea.style.position = 'fixed';
+            textarea.style.left = '-9999px';
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            textarea.remove();
+        }
+
+        setCouponMessage(`Đã copy mã ${code}.`, 'success');
+    } catch (error) {
+        setCouponMessage('Không thể copy mã. Bạn có thể bôi đen và copy thủ công.', 'error');
+    }
+}
+
+function useCouponNow(code) {
+    if (!code) return;
+
+    sessionStorage.setItem('checkout_coupon_code', code);
+    localStorage.setItem('checkout_coupon_code', code);
+    window.location.href = 'checkout.html';
+}
+
+async function redeemCoupon(couponId, button) {
+    if (!couponId) return;
+
+    const originalText = button?.textContent || 'Đổi mã';
+    if (button) {
+        button.disabled = true;
+        button.textContent = 'Đang đổi...';
+    }
+
+    try {
+        const result = await apiFetch(PROFILE_REDEEM_COUPON_API, {
+            method: 'POST',
+            body: JSON.stringify({ coupon_id: couponId })
+        });
+        const successMessage = result.message || 'Đổi mã giảm giá thành công.';
+
+        await loadCoupons();
+        profileState.coupons.activeTab = 'mine';
+        renderCouponTabs();
+        setCouponMessage(successMessage, 'success');
+    } catch (error) {
+        if (isAuthError(error)) {
+            redirectToLogin();
+            return;
+        }
+
+        setCouponMessage(getErrorMessage(error, 'Không thể đổi mã giảm giá.'), 'error');
+    } finally {
+        if (button) {
+            button.disabled = false;
+            button.textContent = originalText;
+        }
+    }
+}
+
+function setupCouponEvents() {
+    const section = document.getElementById('couponSection');
+    if (!section) return;
+
+    section.addEventListener('click', (event) => {
+        const tabButton = event.target.closest('[data-coupon-tab]');
+        if (tabButton) {
+            profileState.coupons.activeTab = tabButton.dataset.couponTab || 'mine';
+            renderCouponTabs();
+            return;
+        }
+
+        const copyButton = event.target.closest('[data-copy-code]');
+        if (copyButton) {
+            copyCouponCode(copyButton.dataset.copyCode);
+            return;
+        }
+
+        const useButton = event.target.closest('[data-use-code]');
+        if (useButton && !useButton.disabled) {
+            useCouponNow(useButton.dataset.useCode);
+            return;
+        }
+
+        const redeemButton = event.target.closest('[data-redeem-coupon]');
+        if (redeemButton && !redeemButton.disabled) {
+            redeemCoupon(Number(redeemButton.dataset.redeemCoupon), redeemButton);
+        }
+    });
 }
 
 function renderRecentOrders(orders = []) {
@@ -405,6 +738,12 @@ function setupProfileEvents() {
     document.getElementById('cancelProfileBtn').addEventListener('click', resetProfileForm);
     document.getElementById('logoutBtn').addEventListener('click', logoutProfile);
     document.getElementById('changePasswordBtn').addEventListener('click', changePasswordFromProfile);
+    document.getElementById('couponSectionBtn').addEventListener('click', () => {
+        const section = document.getElementById('couponSection');
+        if (section) {
+            section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    });
     document.getElementById('favoriteBtn').addEventListener('click', () => {
         setMessage('Mục món yêu thích sẽ hiển thị dữ liệu khi bảng favorite_products được thêm.');
     });
@@ -417,10 +756,12 @@ function setupProfileEvents() {
     document.getElementById('sidebarAvatar').addEventListener('click', openAvatarPicker);
     document.getElementById('sidebarAvatar').addEventListener('keydown', handleAvatarPickerKeydown);
     document.getElementById('avatarFile').addEventListener('change', handleAvatarSelected);
+    setupCouponEvents();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
     updateCartCount();
     setupProfileEvents();
     loadProfile();
+    loadCoupons();
 });

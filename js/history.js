@@ -62,6 +62,55 @@ function renderItemsPreview(order) {
         .join('<br>');
 }
 
+function formatAddress(address) {
+    const value = String(address || '').trim();
+    const normalized = value
+        .toLocaleLowerCase('vi-VN')
+        .replace(/\s+/g, ' ');
+
+    if (normalized === 'u8-i82, khu đô thị đô nghĩa, phường yên nghĩa, thành phố hà nội') {
+        return 'U8-I82, khu đô thị Đô Nghĩa, Phường Yên Nghĩa, thành phố Hà Nội';
+    }
+
+    return value;
+}
+
+function getOrderSubtotal(order) {
+    return (order.items || []).reduce((sum, item) => {
+        return sum + Number(item.price || 0) * Number(item.quantity || 0);
+    }, 0);
+}
+
+function getOrderFinalAmount(order) {
+    return Number(order.final_amount ?? order.total_amount ?? 0);
+}
+
+function getOrderBaseShipping(order, subtotal, finalAmount, discountAmount) {
+    if (discountAmount > 0) {
+        return Math.max(0, finalAmount + discountAmount - subtotal);
+    }
+
+    return Number(order.shipping_fee || 0);
+}
+
+function renderOrderCouponField(order) {
+    const discountAmount = Number(order.discount_amount || 0);
+    const couponCode = order.coupon_code ? String(order.coupon_code) : '';
+
+    if (!couponCode && discountAmount <= 0) {
+        return '';
+    }
+
+    const discountText = discountAmount > 0 ? ` - Giảm ${currency.format(discountAmount)}` : '';
+
+    return `
+        <div class="order-field order-discount-field">
+            <span>Mã giảm giá</span>
+            <strong>${couponCode ? escapeHtml(couponCode) : 'Đã áp dụng'}${discountText}</strong>
+        </div>
+    `;
+}
+
 function renderEmptyState() {
     const text = activeFilter === 'all'
         ? 'Bạn chưa có đơn hàng nào'
@@ -121,15 +170,16 @@ function renderOrders() {
                     </div>
                     <div class="order-field">
                         <span>Địa chỉ giao hàng</span>
-                        <strong>${escapeHtml(order.customer_address)}</strong>
+                        <strong>${escapeHtml(formatAddress(order.customer_address))}</strong>
                     </div>
                     <div class="order-field">
                         <span>Thanh toán</span>
                         <strong>${escapeHtml(order.payment_method || 'COD')} - Thanh toán khi nhận hàng</strong>
                     </div>
+                    ${renderOrderCouponField(order)}
                     <div class="order-field">
                         <span>Tổng tiền</span>
-                        <div class="order-price">${currency.format(order.total_amount)}</div>
+                        <div class="order-price">${currency.format(getOrderFinalAmount(order))}</div>
                     </div>
                 </div>
 
@@ -168,6 +218,17 @@ async function loadHistory() {
 async function showOrderDetail(orderId) {
     try {
         const order = await requestJson(`${HISTORY_API_BASE}/detail.php?id=${encodeURIComponent(orderId)}`);
+        const subtotal = getOrderSubtotal(order);
+        const discountAmount = Number(order.discount_amount || 0);
+        const couponCode = order.coupon_code ? String(order.coupon_code) : '';
+        const finalAmount = getOrderFinalAmount(order);
+        const shippingFee = getOrderBaseShipping(order, subtotal, finalAmount, discountAmount);
+        const couponHtml = couponCode || discountAmount > 0
+            ? `
+                <p class="detail-coupon-code"><strong>Mã giảm giá:</strong> ${couponCode ? escapeHtml(couponCode) : 'Đã áp dụng'}</p>
+                <p class="detail-discount"><strong>Giảm giá:</strong> -${currency.format(discountAmount)}</p>
+            `
+            : '';
         const itemsHtml = (order.items || []).map((item) => `
             <li class="detail-item">
                 <img src="${escapeHtml(item.image_url || './assets/img/vy-food.png')}" alt="${escapeHtml(item.title)}">
@@ -181,12 +242,16 @@ async function showOrderDetail(orderId) {
             <p><strong>Trạng thái:</strong> ${statusLabels[order.status] || order.status}</p>
             <p><strong>Ngày đặt:</strong> ${formatDate(order.created_at)}</p>
             <p><strong>Người nhận:</strong> ${escapeHtml(order.customer_name)} - ${escapeHtml(order.customer_phone)}</p>
-            <p><strong>Địa chỉ:</strong> ${escapeHtml(order.customer_address)}</p>
+            <p><strong>Địa chỉ:</strong> ${escapeHtml(formatAddress(order.customer_address))}</p>
             <p><strong>Thanh toán:</strong> ${escapeHtml(order.payment_method || 'COD')}</p>
             <p><strong>Ghi chú:</strong> ${escapeHtml(order.notes || '')}</p>
             <ul class="detail-items">${itemsHtml}</ul>
-            <p><strong>Phí giao hàng:</strong> ${currency.format(order.shipping_fee || 0)}</p>
-            <p><strong>Tổng tiền:</strong> ${currency.format(order.total_amount)}</p>
+            <div class="detail-totals">
+                <p><strong>Tạm tính:</strong> ${currency.format(subtotal)}</p>
+                <p><strong>Phí giao hàng:</strong> ${shippingFee === 0 ? 'Miễn phí' : currency.format(shippingFee)}</p>
+                ${couponHtml}
+                <p class="detail-grand-total"><strong>Tổng thanh toán:</strong> ${currency.format(finalAmount)}</p>
+            </div>
         `;
         document.getElementById('orderDetailModal').classList.add('open');
     } catch (error) {

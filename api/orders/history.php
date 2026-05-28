@@ -42,7 +42,8 @@ try {
     $currentUser = requireSessionUser();
 
     $stmt = $pdo->prepare(
-        "SELECT o.id, o.created_at, o.total_amount, o.shipping_fee, o.status,
+        "SELECT o.id, o.created_at, o.total_amount, o.shipping_fee,
+                o.coupon_code, o.discount_amount, o.final_amount, o.status,
                 o.customer_name, o.customer_phone, o.customer_address,
                 COALESCE(p.payment_method, 'COD') AS payment_method
          FROM orders o

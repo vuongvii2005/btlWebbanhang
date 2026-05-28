@@ -230,6 +230,13 @@
     padding: 0 12px;
 }
 
+.checkout-field input[readonly] {
+    background: #f3f7f4;
+    border-color: #b8d8c0;
+    color: #1f5f35;
+    cursor: not-allowed;
+}
+
 .checkout-card textarea {
     min-height: 96px;
     padding: 12px;
@@ -241,6 +248,11 @@
 .coupon-input-wrap input:focus {
     border-color: var(--checkout-red);
     box-shadow: 0 0 0 3px rgba(181, 41, 47, 0.1);
+}
+
+.checkout-field input[readonly]:focus {
+    border-color: #7fbd8c;
+    box-shadow: 0 0 0 3px rgba(22, 128, 58, 0.12);
 }
 
 .checkout-card-row {

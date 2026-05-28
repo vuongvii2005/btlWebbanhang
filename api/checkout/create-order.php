@@ -27,9 +27,9 @@ try {
     $deliveryType = checkoutDeliveryType($input);
 
     if ($deliveryType === 'pickup') {
-        $streetAddress = 'u8-i82, khu đô thị đô nghĩa';
-        $province = 'thành phố hà nội';
-        $ward = 'phường yên nghĩa';
+        $streetAddress = 'U8-I82, khu đô thị Đô Nghĩa';
+        $province = 'thành phố Hà Nội';
+        $ward = 'Phường Yên Nghĩa';
         $input['customer_address'] = $streetAddress;
         $input['province'] = $province;
         $input['ward'] = $ward;
@@ -206,7 +206,7 @@ try {
         $currentUser['id'],
         $customerName,
         $customerEmail,
-        $customerAddress,
+        $deliveryType === 'delivery' ? $customerAddress : null,
         $saveInfo
     );
 

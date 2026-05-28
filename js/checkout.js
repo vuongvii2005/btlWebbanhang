@@ -5,9 +5,9 @@ const CHECKOUT_DEFAULT_AVATAR = 'assets/img/avt_mac_dinh.jpg';
 const CHECKOUT_FALLBACK_IMAGE = 'assets/img/vy-food.png';
 const CHECKOUT_SHIPPING_FEE = 25000;
 const PICKUP_ADDRESS_DEFAULTS = {
-    address: 'u8-i82, khu đô thị đô nghĩa',
-    province: 'thành phố hà nội',
-    ward: 'phường yên nghĩa'
+    address: 'U8-I82, khu đô thị Đô Nghĩa',
+    province: 'thành phố Hà Nội',
+    ward: 'Phường Yên Nghĩa'
 };
 const checkoutMoney = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' });
 
@@ -183,6 +183,25 @@ function renderCheckoutState() {
     resetCoupon();
 }
 
+function hydratePendingCoupon() {
+    const pendingCode = sessionStorage.getItem('checkout_coupon_code')
+        || localStorage.getItem('checkout_coupon_code')
+        || '';
+    const couponInput = document.getElementById('couponCode');
+
+    if (!pendingCode || !couponInput) return;
+
+    couponInput.value = pendingCode;
+    sessionStorage.removeItem('checkout_coupon_code');
+    localStorage.removeItem('checkout_coupon_code');
+
+    if (checkoutState.cart.length > 0) {
+        applyCoupon();
+    } else {
+        setMessage('couponMessage', 'Mã giảm giá đã được điền. Hãy thêm món để áp dụng.', 'info');
+    }
+}
+
 function splitSavedAddress(address) {
     const parts = String(address || '')
         .split(',')
@@ -221,6 +240,12 @@ function fillUserInfo(user) {
     document.getElementById('customerAddress').value = address.address;
     document.getElementById('customerWard').value = address.ward;
     document.getElementById('customerProvince').value = address.province;
+
+    if (checkoutState.deliveryType === 'pickup') {
+        checkoutState.deliveryAddressDraft = readAddressFields();
+        writeAddressFields(PICKUP_ADDRESS_DEFAULTS);
+        setAddressFieldsReadonly(true);
+    }
 }
 
 function updateHeaderUser(user) {
@@ -300,12 +325,25 @@ function writeAddressFields(values) {
     document.getElementById('customerWard').value = values.ward || '';
 }
 
+function setAddressFieldsReadonly(isReadonly) {
+    ['customerAddress', 'customerProvince', 'customerWard'].forEach((id) => {
+        const field = document.getElementById(id);
+        field.readOnly = isReadonly;
+        field.setAttribute('aria-readonly', String(isReadonly));
+    });
+}
+
 function applyDeliveryTypeAddress() {
     if (checkoutState.deliveryType === 'pickup') {
-        checkoutState.deliveryAddressDraft = readAddressFields();
+        if (!checkoutState.deliveryAddressDraft) {
+            checkoutState.deliveryAddressDraft = readAddressFields();
+        }
         writeAddressFields(PICKUP_ADDRESS_DEFAULTS);
+        setAddressFieldsReadonly(true);
         return;
     }
+
+    setAddressFieldsReadonly(false);
 
     if (checkoutState.deliveryAddressDraft) {
         writeAddressFields(checkoutState.deliveryAddressDraft);
@@ -451,6 +489,7 @@ function validateCheckoutForm() {
 function buildOrderPayload() {
     const schedule = getDeliverySchedule();
     const couponCode = checkoutState.appliedCoupon ? document.getElementById('couponCode').value.trim() : '';
+    const shouldSaveInfo = checkoutState.deliveryType === 'delivery' && document.getElementById('saveInfo').checked;
 
     return {
         customer_name: document.getElementById('customerName').value.trim(),
@@ -466,7 +505,7 @@ function buildOrderPayload() {
         coupon_code: couponCode,
         notes: document.getElementById('orderNotes').value.trim(),
         vat_invoice: document.getElementById('vatInvoice').checked,
-        save_info: document.getElementById('saveInfo').checked,
+        save_info: shouldSaveInfo,
         items: getItemsPayload()
     };
 }
@@ -613,4 +652,5 @@ document.addEventListener('DOMContentLoaded', async () => {
     checkoutState.cart = getCartForUser(user.id);
     saveCartForUser();
     renderCheckoutState();
+    hydratePendingCoupon();
 });

@@ -78,12 +78,17 @@ function profileGetStats($pdo, $userId) {
         $favoriteCount = (int)$favStmt->fetchColumn();
     }
 
-    $totalSpent = (float)$orderStats['total_spent'];
+    $points = 0;
+    if (profileTableExists($pdo, 'user_points')) {
+        $pointStmt = $pdo->prepare("SELECT points FROM user_points WHERE user_id = ? LIMIT 1");
+        $pointStmt->execute([$userId]);
+        $points = (int)($pointStmt->fetchColumn() ?: 0);
+    }
 
     return [
         'total_orders' => (int)$orderStats['total_orders'],
         'favorite_count' => $favoriteCount,
-        'points' => (int)floor($totalSpent / 10000)
+        'points' => $points
     ];
 }
 

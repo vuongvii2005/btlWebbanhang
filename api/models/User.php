@@ -3,6 +3,8 @@
  * USER MODEL - Quản lý người dùng
  */
 
+require_once __DIR__ . '/../user/welcome-coupon-helper.php';
+
 class User {
     
     private $pdo;
@@ -94,6 +96,15 @@ class User {
             ]);
             
             $userId = $this->pdo->lastInsertId();
+
+            try {
+                welcomeCouponEnsureForUser($this->pdo, (int)$userId);
+            } catch (Exception $couponError) {
+                logError('Welcome coupon grant failed', [
+                    'user_id' => $userId,
+                    'error' => $couponError->getMessage()
+                ]);
+            }
             
             return [
                 'success' => true,
