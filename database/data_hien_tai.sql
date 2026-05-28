@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 27, 2026 at 04:12 PM
+-- Generation Time: May 28, 2026 at 06:51 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -53,6 +53,42 @@ INSERT INTO `categories` (`id`, `name`, `description`, `icon`, `display_order`, 
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `coupons`
+--
+
+CREATE TABLE `coupons` (
+  `id` int(11) NOT NULL,
+  `code` varchar(50) NOT NULL,
+  `title` varchar(150) NOT NULL,
+  `description` text DEFAULT NULL,
+  `discount_type` enum('fixed','percent','freeship') NOT NULL,
+  `discount_value` decimal(10,2) NOT NULL DEFAULT 0.00,
+  `min_order_amount` decimal(10,2) NOT NULL DEFAULT 0.00,
+  `max_discount_amount` decimal(10,2) DEFAULT NULL,
+  `points_required` int(11) NOT NULL DEFAULT 0,
+  `usage_limit` int(11) DEFAULT NULL,
+  `used_count` int(11) NOT NULL DEFAULT 0,
+  `per_user_limit` int(11) NOT NULL DEFAULT 1,
+  `start_date` datetime DEFAULT NULL,
+  `end_date` datetime DEFAULT NULL,
+  `status` tinyint(1) NOT NULL DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `coupons`
+--
+
+INSERT INTO `coupons` (`id`, `code`, `title`, `description`, `discount_type`, `discount_value`, `min_order_amount`, `max_discount_amount`, `points_required`, `usage_limit`, `used_count`, `per_user_limit`, `start_date`, `end_date`, `status`, `created_at`, `updated_at`) VALUES
+(1, 'GIAM10K', 'Giảm 10.000đ', 'Đổi 100 điểm để nhận mã giảm 10.000đ cho đơn từ 100.000đ', 'fixed', 10000.00, 100000.00, NULL, 100, 1000, 0, 1, '2026-05-28 11:46:16', '2027-05-28 11:46:16', 1, '2026-05-28 04:46:16', '2026-05-28 04:46:16'),
+(2, 'GIAM25K', 'Giảm 25.000đ', 'Đổi 200 điểm để nhận mã giảm 25.000đ cho đơn từ 180.000đ', 'fixed', 25000.00, 180000.00, NULL, 200, 1000, 0, 1, '2026-05-28 11:46:16', '2027-05-28 11:46:16', 1, '2026-05-28 04:46:16', '2026-05-28 04:46:16'),
+(3, 'GIAM10PT', 'Giảm 10%', 'Đổi 300 điểm để nhận mã giảm 10%, tối đa 50.000đ', 'percent', 10.00, 200000.00, 50000.00, 300, 500, 0, 1, '2026-05-28 11:46:16', '2027-05-28 11:46:16', 1, '2026-05-28 04:46:16', '2026-05-28 04:46:16'),
+(4, 'FREESHIP', 'Miễn phí giao hàng', 'Đổi 150 điểm để miễn phí giao hàng cho đơn từ 120.000đ', 'freeship', 0.00, 120000.00, 30000.00, 150, 1000, 0, 1, '2026-05-28 11:46:16', '2027-05-28 11:46:16', 1, '2026-05-28 04:46:16', '2026-05-28 04:46:16');
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `favorite_products`
 --
 
@@ -74,6 +110,12 @@ CREATE TABLE `orders` (
   `user_id` int(11) NOT NULL,
   `total_amount` decimal(10,2) NOT NULL CHECK (`total_amount` >= 0),
   `shipping_fee` decimal(10,2) DEFAULT 30000.00,
+  `coupon_id` int(11) DEFAULT NULL,
+  `coupon_code` varchar(50) DEFAULT NULL,
+  `discount_amount` decimal(10,2) NOT NULL DEFAULT 0.00,
+  `points_earned` int(11) NOT NULL DEFAULT 0,
+  `points_used` int(11) NOT NULL DEFAULT 0,
+  `final_amount` decimal(10,2) DEFAULT NULL,
   `delivery_type` enum('delivery','pickup') DEFAULT 'delivery',
   `delivery_date` date DEFAULT NULL,
   `delivery_time` varchar(50) DEFAULT NULL,
@@ -90,24 +132,24 @@ CREATE TABLE `orders` (
 -- Dumping data for table `orders`
 --
 
-INSERT INTO `orders` (`id`, `user_id`, `total_amount`, `shipping_fee`, `delivery_type`, `delivery_date`, `delivery_time`, `customer_name`, `customer_phone`, `customer_address`, `notes`, `status`, `created_at`, `updated_at`) VALUES
-(1, 2, 500000.00, 30000.00, 'delivery', NULL, NULL, 'Vương Vy', '0901234567', '123 Nguyễn Hữu Cầu, Q1, TPHCM', NULL, 'pending', '2026-05-06 19:42:11', '2026-05-06 19:42:11'),
-(2, 19, 230000.00, 30000.00, 'delivery', '2026-05-13', NULL, 'History Test', '0317273011', '123 Test Street', 'history flow test', 'cancelled', '2026-05-13 10:27:31', '2026-05-13 10:27:31'),
-(3, 21, 610000.00, 30000.00, 'delivery', '2026-05-13', 'asap', 'Checkout Test', '0917361133', '123 Checkout Street', 'checkout flow test', 'pending', '2026-05-13 10:36:12', '2026-05-13 10:36:12'),
-(4, 22, 230000.00, 30000.00, 'delivery', '2026-05-13', NULL, 'Phone Field Test', '0818024144', '123 Test', '', 'pending', '2026-05-13 11:02:41', '2026-05-13 11:02:41'),
-(5, 22, 230000.00, 30000.00, 'delivery', '2026-05-13', NULL, 'Alias Phone Test', '0818024144', '123 Test', '', 'pending', '2026-05-13 11:02:51', '2026-05-13 11:02:51'),
-(6, 5, 90000.00, 30000.00, 'delivery', '2026-05-13', NULL, 'vuong vii', '0327954569', '12132', '123243', 'pending', '2026-05-13 11:04:35', '2026-05-13 11:04:35'),
-(7, 5, 230000.00, 30000.00, 'delivery', '2026-05-14', 'asap', 'vi fd', '0327954564', 'dâd', '23132', 'cancelled', '2026-05-14 04:19:36', '2026-05-14 06:27:14'),
-(8, 7, 180000.00, 0.00, 'pickup', '2026-05-14', 'asap', 'toibingu', '0327954568', '123', '1321321', 'pending', '2026-05-14 07:18:09', '2026-05-14 07:18:09'),
-(9, 5, 750000.00, 30000.00, 'delivery', '2026-05-14', 'asap', 'vi fd', '0327954564', '1324324', 'skjds0bfskdfkj', 'pending', '2026-05-14 07:39:38', '2026-05-14 07:39:38'),
-(10, 5, 750000.00, 30000.00, 'delivery', '2026-05-14', 'asap', 'vi fd', '0327954564', '12123', 'ê324', 'pending', '2026-05-14 07:41:06', '2026-05-14 07:41:06'),
-(11, 5, 750000.00, 30000.00, 'delivery', '2026-05-14', 'asap', 'vi fd', '0327954564', '1324324', '2113221', 'pending', '2026-05-14 07:46:32', '2026-05-14 07:46:32'),
-(12, 5, 210000.00, 30000.00, 'delivery', '2026-05-14', 'asap', 'vi fd', '0327954564', '1324324', 'ffsdfsdf', 'pending', '2026-05-14 07:48:05', '2026-05-14 07:48:05'),
-(13, 5, 210000.00, 30000.00, 'delivery', '2026-05-14', 'asap', 'vi fd', '0327954564', 'ghghgghhgh', 'bbghhgg', 'pending', '2026-05-14 07:54:09', '2026-05-14 07:54:09'),
-(14, 5, 390000.00, 30000.00, 'delivery', '2026-05-14', 'asap', 'vi fd', '0327954564', 'fdsfdfd', 'sfdgfgfd', 'pending', '2026-05-14 07:55:50', '2026-05-14 07:55:50'),
-(15, 5, 390000.00, 30000.00, 'delivery', '2026-05-14', 'asap', 'vi fd', '0327954564', '1324324', 'xsdfsdfsd', 'pending', '2026-05-14 07:57:35', '2026-05-14 07:57:35'),
-(16, 5, 210000.00, 30000.00, 'delivery', '2026-05-14', 'asap', 'vi fd', '0327954564', 'ưeqưewqe', 'sdfsdfds', 'delivered', '2026-05-14 08:00:58', '2026-05-14 08:09:57'),
-(17, 5, 210000.00, 30000.00, 'delivery', '2026-05-14', 'asap', 'vi fd', '0327954564', 'csdfdfsd', 'fdfsdfsd', 'shipping', '2026-05-14 08:01:23', '2026-05-14 08:09:51');
+INSERT INTO `orders` (`id`, `user_id`, `total_amount`, `shipping_fee`, `coupon_id`, `coupon_code`, `discount_amount`, `points_earned`, `points_used`, `final_amount`, `delivery_type`, `delivery_date`, `delivery_time`, `customer_name`, `customer_phone`, `customer_address`, `notes`, `status`, `created_at`, `updated_at`) VALUES
+(1, 2, 500000.00, 30000.00, NULL, NULL, 0.00, 0, 0, NULL, 'delivery', NULL, NULL, 'Vương Vy', '0901234567', '123 Nguyễn Hữu Cầu, Q1, TPHCM', NULL, 'pending', '2026-05-06 19:42:11', '2026-05-06 19:42:11'),
+(2, 19, 230000.00, 30000.00, NULL, NULL, 0.00, 0, 0, NULL, 'delivery', '2026-05-13', NULL, 'History Test', '0317273011', '123 Test Street', 'history flow test', 'cancelled', '2026-05-13 10:27:31', '2026-05-13 10:27:31'),
+(3, 21, 610000.00, 30000.00, NULL, NULL, 0.00, 0, 0, NULL, 'delivery', '2026-05-13', 'asap', 'Checkout Test', '0917361133', '123 Checkout Street', 'checkout flow test', 'pending', '2026-05-13 10:36:12', '2026-05-13 10:36:12'),
+(4, 22, 230000.00, 30000.00, NULL, NULL, 0.00, 0, 0, NULL, 'delivery', '2026-05-13', NULL, 'Phone Field Test', '0818024144', '123 Test', '', 'pending', '2026-05-13 11:02:41', '2026-05-13 11:02:41'),
+(5, 22, 230000.00, 30000.00, NULL, NULL, 0.00, 0, 0, NULL, 'delivery', '2026-05-13', NULL, 'Alias Phone Test', '0818024144', '123 Test', '', 'pending', '2026-05-13 11:02:51', '2026-05-13 11:02:51'),
+(6, 5, 90000.00, 30000.00, NULL, NULL, 0.00, 0, 0, NULL, 'delivery', '2026-05-13', NULL, 'vuong vii', '0327954569', '12132', '123243', 'pending', '2026-05-13 11:04:35', '2026-05-13 11:04:35'),
+(7, 5, 230000.00, 30000.00, NULL, NULL, 0.00, 0, 0, NULL, 'delivery', '2026-05-14', 'asap', 'vi fd', '0327954564', 'dâd', '23132', 'cancelled', '2026-05-14 04:19:36', '2026-05-14 06:27:14'),
+(8, 7, 180000.00, 0.00, NULL, NULL, 0.00, 0, 0, NULL, 'pickup', '2026-05-14', 'asap', 'toibingu', '0327954568', '123', '1321321', 'pending', '2026-05-14 07:18:09', '2026-05-14 07:18:09'),
+(9, 5, 750000.00, 30000.00, NULL, NULL, 0.00, 0, 0, NULL, 'delivery', '2026-05-14', 'asap', 'vi fd', '0327954564', '1324324', 'skjds0bfskdfkj', 'pending', '2026-05-14 07:39:38', '2026-05-14 07:39:38'),
+(10, 5, 750000.00, 30000.00, NULL, NULL, 0.00, 0, 0, NULL, 'delivery', '2026-05-14', 'asap', 'vi fd', '0327954564', '12123', 'ê324', 'pending', '2026-05-14 07:41:06', '2026-05-14 07:41:06'),
+(11, 5, 750000.00, 30000.00, NULL, NULL, 0.00, 0, 0, NULL, 'delivery', '2026-05-14', 'asap', 'vi fd', '0327954564', '1324324', '2113221', 'pending', '2026-05-14 07:46:32', '2026-05-14 07:46:32'),
+(12, 5, 210000.00, 30000.00, NULL, NULL, 0.00, 0, 0, NULL, 'delivery', '2026-05-14', 'asap', 'vi fd', '0327954564', '1324324', 'ffsdfsdf', 'pending', '2026-05-14 07:48:05', '2026-05-14 07:48:05'),
+(13, 5, 210000.00, 30000.00, NULL, NULL, 0.00, 0, 0, NULL, 'delivery', '2026-05-14', 'asap', 'vi fd', '0327954564', 'ghghgghhgh', 'bbghhgg', 'pending', '2026-05-14 07:54:09', '2026-05-14 07:54:09'),
+(14, 5, 390000.00, 30000.00, NULL, NULL, 0.00, 0, 0, NULL, 'delivery', '2026-05-14', 'asap', 'vi fd', '0327954564', 'fdsfdfd', 'sfdgfgfd', 'pending', '2026-05-14 07:55:50', '2026-05-14 07:55:50'),
+(15, 5, 390000.00, 30000.00, NULL, NULL, 0.00, 0, 0, NULL, 'delivery', '2026-05-14', 'asap', 'vi fd', '0327954564', '1324324', 'xsdfsdfsd', 'pending', '2026-05-14 07:57:35', '2026-05-14 07:57:35'),
+(16, 5, 210000.00, 30000.00, NULL, NULL, 0.00, 0, 0, NULL, 'delivery', '2026-05-14', 'asap', 'vi fd', '0327954564', 'ưeqưewqe', 'sdfsdfds', 'delivered', '2026-05-14 08:00:58', '2026-05-14 08:09:57'),
+(17, 5, 210000.00, 30000.00, NULL, NULL, 0.00, 0, 0, NULL, 'delivery', '2026-05-14', 'asap', 'vi fd', '0327954564', 'csdfdfsd', 'fdfsdfsd', 'shipping', '2026-05-14 08:01:23', '2026-05-14 08:09:51');
 
 -- --------------------------------------------------------
 
@@ -206,6 +248,22 @@ INSERT INTO `payments` (`id`, `order_id`, `amount`, `payment_method`, `payment_s
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `point_transactions`
+--
+
+CREATE TABLE `point_transactions` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `order_id` int(11) DEFAULT NULL,
+  `points` int(11) NOT NULL,
+  `type` enum('earn','redeem','refund','adjust') NOT NULL,
+  `description` varchar(255) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `products`
 --
 
@@ -293,7 +351,7 @@ INSERT INTO `users` (`id`, `fullname`, `phone`, `password`, `email`, `address`, 
 (2, 'Vương Vy', '0901234567', '$2y$12$mKZ5LHKT89DKGJM4.CrESeXvGPNHhOW.TtTGmK9Hk7rKOFZ2kIk9a', 'vy@example.com', NULL, NULL, 'customer', 1, '2026-05-06 19:42:11', '2026-05-06 19:42:11'),
 (3, 'vi huùng vương', '0327954569', '$2y$12$CpeQU/GCGTitmX07h6kWxu1.JFRb2DRikTWJmNr0na/n0BVf.JxHK', 'vuongvidlls@gmail.com', NULL, NULL, 'customer', 1, '2026-05-07 09:33:09', '2026-05-07 09:33:09'),
 (5, 'vi fd', '0327954564', '$2y$12$jrn9BWCUuqFMLUPCADPRjelY5WuWU2akjP2jKJbPtnOX.m990w1Ji', 'vi@1234', NULL, NULL, 'customer', 1, '2026-05-07 09:36:26', '2026-05-07 09:36:26'),
-(7, 'toibingu', '0327954568', '$2y$12$Mb1btIu.ix3lZoCFXDQ/1OVHmGw8KbcGGlkeEC.OnAJxNLRBRoyoy', 'toibingu@1213', NULL, NULL, 'customer', 1, '2026-05-07 09:59:50', '2026-05-07 09:59:50'),
+(7, 'toibingu', '0327954568', '$2y$12$Mb1btIu.ix3lZoCFXDQ/1OVHmGw8KbcGGlkeEC.OnAJxNLRBRoyoy', 'toibingu@gmail.com', NULL, 'uploads/avatars/user_7_1779894636_1da65070.jpg', 'customer', 1, '2026-05-07 09:59:50', '2026-05-27 15:10:36'),
 (8, 'hahahah', '0327954561', '$2y$12$wiV.KatdTc8EX0ch6jy65eg8ExzECgt0Y6jtYaBSCzAZzh71QEB.C', 'haha@123', NULL, NULL, 'customer', 1, '2026-05-07 10:06:53', '2026-05-07 10:06:53'),
 (10, 'hahahah', '0327954560', '$2y$12$PsyKY8WrXvRD3xvj.iC14u5grRcAHhp1XWvHJAmXHiAde2394HZfS', 'haha@1234', NULL, NULL, 'customer', 1, '2026-05-07 10:09:27', '2026-05-07 10:09:27'),
 (11, 'hahahah', '0327954581', '$2y$12$2Dcj6SLesMm7li4YiTTUu.oTnNISmLj657ppWXMS9qlL3ZBYLIOxe', 'haha@12345', NULL, NULL, 'customer', 1, '2026-05-07 10:11:42', '2026-05-07 10:11:42'),
@@ -329,6 +387,64 @@ CREATE TABLE `user_addresses` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `user_coupons`
+--
+
+CREATE TABLE `user_coupons` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `coupon_id` int(11) NOT NULL,
+  `coupon_code` varchar(80) NOT NULL,
+  `source` enum('points_exchange','admin_gift','campaign') NOT NULL DEFAULT 'points_exchange',
+  `is_used` tinyint(1) NOT NULL DEFAULT 0,
+  `used_order_id` int(11) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `expired_at` datetime DEFAULT NULL,
+  `used_at` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `user_points`
+--
+
+CREATE TABLE `user_points` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `points` int(11) NOT NULL DEFAULT 0,
+  `lifetime_points` int(11) NOT NULL DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `user_points`
+--
+
+INSERT INTO `user_points` (`id`, `user_id`, `points`, `lifetime_points`, `created_at`, `updated_at`) VALUES
+(1, 2, 200, 200, '2026-05-28 04:46:16', '2026-05-28 04:46:16'),
+(2, 3, 200, 200, '2026-05-28 04:46:16', '2026-05-28 04:46:16'),
+(3, 5, 200, 200, '2026-05-28 04:46:16', '2026-05-28 04:46:16'),
+(4, 7, 200, 200, '2026-05-28 04:46:16', '2026-05-28 04:46:16'),
+(5, 8, 200, 200, '2026-05-28 04:46:16', '2026-05-28 04:46:16'),
+(6, 10, 200, 200, '2026-05-28 04:46:16', '2026-05-28 04:46:16'),
+(7, 11, 200, 200, '2026-05-28 04:46:16', '2026-05-28 04:46:16'),
+(8, 12, 200, 200, '2026-05-28 04:46:16', '2026-05-28 04:46:16'),
+(9, 13, 200, 200, '2026-05-28 04:46:16', '2026-05-28 04:46:16'),
+(10, 14, 200, 200, '2026-05-28 04:46:16', '2026-05-28 04:46:16'),
+(11, 16, 200, 200, '2026-05-28 04:46:16', '2026-05-28 04:46:16'),
+(12, 18, 200, 200, '2026-05-28 04:46:16', '2026-05-28 04:46:16'),
+(13, 19, 200, 200, '2026-05-28 04:46:16', '2026-05-28 04:46:16'),
+(14, 20, 200, 200, '2026-05-28 04:46:16', '2026-05-28 04:46:16'),
+(15, 21, 200, 200, '2026-05-28 04:46:16', '2026-05-28 04:46:16'),
+(16, 22, 200, 200, '2026-05-28 04:46:16', '2026-05-28 04:46:16'),
+(17, 1, 0, 0, '2026-05-28 04:46:16', '2026-05-28 04:46:16'),
+(18, 17, 0, 0, '2026-05-28 04:46:16', '2026-05-28 04:46:16');
+
+-- --------------------------------------------------------
+
+--
 -- Structure for view `order_stats`
 --
 DROP TABLE IF EXISTS `order_stats`;
@@ -347,6 +463,13 @@ ALTER TABLE `categories`
   ADD UNIQUE KEY `name` (`name`),
   ADD KEY `idx_name` (`name`),
   ADD KEY `idx_display_order` (`display_order`);
+
+--
+-- Indexes for table `coupons`
+--
+ALTER TABLE `coupons`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uk_coupons_code` (`code`);
 
 --
 -- Indexes for table `favorite_products`
@@ -381,6 +504,14 @@ ALTER TABLE `payments`
   ADD PRIMARY KEY (`id`),
   ADD KEY `idx_order_id` (`order_id`),
   ADD KEY `idx_status` (`payment_status`);
+
+--
+-- Indexes for table `point_transactions`
+--
+ALTER TABLE `point_transactions`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_point_transactions_user` (`user_id`),
+  ADD KEY `idx_point_transactions_order` (`order_id`);
 
 --
 -- Indexes for table `products`
@@ -420,6 +551,23 @@ ALTER TABLE `user_addresses`
   ADD KEY `idx_is_default` (`is_default`);
 
 --
+-- Indexes for table `user_coupons`
+--
+ALTER TABLE `user_coupons`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uk_user_coupons_code` (`coupon_code`),
+  ADD KEY `idx_user_coupons_user` (`user_id`),
+  ADD KEY `idx_user_coupons_coupon` (`coupon_id`),
+  ADD KEY `fk_user_coupons_order` (`used_order_id`);
+
+--
+-- Indexes for table `user_points`
+--
+ALTER TABLE `user_points`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uk_user_points_user` (`user_id`);
+
+--
 -- AUTO_INCREMENT for dumped tables
 --
 
@@ -430,10 +578,16 @@ ALTER TABLE `categories`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
+-- AUTO_INCREMENT for table `coupons`
+--
+ALTER TABLE `coupons`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
 -- AUTO_INCREMENT for table `favorite_products`
 --
 ALTER TABLE `favorite_products`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `orders`
@@ -452,6 +606,12 @@ ALTER TABLE `order_items`
 --
 ALTER TABLE `payments`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
+
+--
+-- AUTO_INCREMENT for table `point_transactions`
+--
+ALTER TABLE `point_transactions`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `products`
@@ -476,6 +636,18 @@ ALTER TABLE `users`
 --
 ALTER TABLE `user_addresses`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `user_coupons`
+--
+ALTER TABLE `user_coupons`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `user_points`
+--
+ALTER TABLE `user_points`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=32;
 
 --
 -- Constraints for dumped tables
@@ -508,6 +680,13 @@ ALTER TABLE `payments`
   ADD CONSTRAINT `payments_ibfk_1` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`);
 
 --
+-- Constraints for table `point_transactions`
+--
+ALTER TABLE `point_transactions`
+  ADD CONSTRAINT `fk_point_transactions_order` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `fk_point_transactions_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
 -- Constraints for table `products`
 --
 ALTER TABLE `products`
@@ -525,6 +704,20 @@ ALTER TABLE `reviews`
 --
 ALTER TABLE `user_addresses`
   ADD CONSTRAINT `fk_user_addresses_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `user_coupons`
+--
+ALTER TABLE `user_coupons`
+  ADD CONSTRAINT `fk_user_coupons_coupon` FOREIGN KEY (`coupon_id`) REFERENCES `coupons` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_user_coupons_order` FOREIGN KEY (`used_order_id`) REFERENCES `orders` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `fk_user_coupons_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `user_points`
+--
+ALTER TABLE `user_points`
+  ADD CONSTRAINT `fk_user_points_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

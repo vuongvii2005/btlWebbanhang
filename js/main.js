@@ -396,13 +396,32 @@ window.onclick = function (event) {
 const modalCloseBtn = document.getElementById('modalCloseBtn');
 modalCloseBtn.onclick = closeProductDetailModal;
 
+function requireCheckoutLogin() {
+    if (typeof isLoggedIn === 'function' && isLoggedIn()) {
+        return true;
+    }
+
+    if (typeof showLoginModal === 'function') showLoginModal();
+    if (typeof disablePageScroll === 'function') disablePageScroll();
+    return false;
+}
+
+function saveCheckoutCart(items) {
+    const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+    const key = user?.id ? `shoppingCart:${user.id}` : 'shoppingCart';
+    localStorage.setItem(key, JSON.stringify(items));
+}
+
 function goToCheckout() {
     if (cart.length === 0) {
         alert("Giỏ hàng của bạn đang trống!");
         return; 
     }
     // Lưu giỏ hàng vào localStorage
-    localStorage.setItem('shoppingCart', JSON.stringify(cart));
+    if (!requireCheckoutLogin()) {
+        return;
+    }
+    saveCheckoutCart(cart);
     // Chuyển sang trang checkout.html
     window.location.href = 'checkout.html';
 
@@ -420,6 +439,9 @@ function buyNow(productId) {
         alert("Không tìm thấy sản phẩm!");
         return;
     }
+    if (!requireCheckoutLogin()) {
+        return;
+    }
     // 3. Tạo một giỏ hàng tạm thời CHỈ chứa sản phẩm này
     const singleItemCart = [{
         id: product.id,
@@ -431,7 +453,7 @@ function buyNow(productId) {
         note: note
     }];
     // 4. Lưu giỏ hàng tạm thời này vào localStorage (sử dụng cùng key với giỏ hàng chính)
-    localStorage.setItem('shoppingCart', JSON.stringify(singleItemCart));
+    saveCheckoutCart(singleItemCart);
     // 5. Chuyển người dùng đến trang thanh toán
     window.location.href = 'checkout.html';
 }

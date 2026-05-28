@@ -20,6 +20,12 @@ body {
     color: var(--profile-text);
 }
 
+header {
+    position: sticky;
+    top: 0;
+    left: 0;
+}
+
 .profile-cart-link {
     display: inline-flex;
 }
@@ -553,8 +559,11 @@ body {
 }
 
 @media (max-width: 760px) {
-    .header-middle .container,
-    .header-bottom .container {
+    header {
+        position: static;
+    }
+
+    .header-middle .container {
         flex-wrap: wrap;
     }
 
@@ -564,12 +573,6 @@ body {
 
     .form-search {
         width: min(100%, 420px);
-    }
-
-    .menu-list {
-        overflow-x: auto;
-        justify-content: flex-start;
-        padding-left: 0;
     }
 
     .profile-page {

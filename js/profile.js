@@ -108,7 +108,9 @@ function updateCartCount() {
     if (!countEl) return;
 
     try {
-        const cart = JSON.parse(localStorage.getItem('shoppingCart') || '[]');
+        const user = getCurrentUser();
+        const key = user?.id ? `shoppingCart:${user.id}` : 'shoppingCart';
+        const cart = JSON.parse(localStorage.getItem(key) || '[]');
         countEl.textContent = cart.reduce((total, item) => total + Number(item.quantity || 1), 0);
     } catch (error) {
         countEl.textContent = '0';

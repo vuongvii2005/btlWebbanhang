@@ -8,141 +8,141 @@ require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../utils/Helper.php';
 require_once __DIR__ . '/../utils/Response.php';
-
-function requireSessionUser() {
-    if (hasBearerToken()) {
-        $tokenUser = getAuthUser();
-        if ($tokenUser) {
-            return $tokenUser;
-        }
-
-        Response::unauthorized();
-    }
-
-    if (session_status() === PHP_SESSION_NONE) {
-        session_start();
-    }
-
-    if (empty($_SESSION['user'])) {
-        Response::unauthorized();
-    }
-
-    return $_SESSION['user'];
-}
+require_once __DIR__ . '/checkout-helpers.php';
 
 try {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         Response::error('Method not allowed', 405);
     }
 
-    $currentUser = requireSessionUser();
-    $rawBody = file_get_contents("php://input");
-    $input = json_decode($rawBody, true);
-
-    if (!is_array($input)) {
-        $input = $_POST;
-    }
+    $currentUser = checkoutRequireAuthenticatedUser();
+    $input = checkoutReadInput();
 
     $customerName = trim($input['customer_name'] ?? '');
     $customerPhone = trim($input['customer_phone'] ?? $input['phone'] ?? $input['customerPhone'] ?? '');
-    $customerAddress = trim($input['customer_address'] ?? $input['address'] ?? $input['customerAddress'] ?? '');
+    $customerEmail = trim($input['email'] ?? '');
+    $streetAddress = trim($input['customer_address'] ?? $input['address'] ?? $input['customerAddress'] ?? '');
+    $province = trim($input['province'] ?? '');
+    $ward = trim($input['ward'] ?? '');
+    $deliveryType = checkoutDeliveryType($input);
+
+    if ($deliveryType === 'pickup') {
+        $streetAddress = 'u8-i82, khu đô thị đô nghĩa';
+        $province = 'thành phố hà nội';
+        $ward = 'phường yên nghĩa';
+        $input['customer_address'] = $streetAddress;
+        $input['province'] = $province;
+        $input['ward'] = $ward;
+    }
+
+    $customerAddress = checkoutBuildCustomerAddress($input);
+    $couponCode = trim($input['coupon_code'] ?? '');
     $items = $input['items'] ?? [];
 
     if ($customerName === '') {
         Response::badRequest(['customer_name' => 'Customer name is required']);
     }
+
     if ($customerPhone === '') {
         Response::badRequest(['customer_phone' => 'Customer phone is required']);
     }
+
     if (!validatePhone($customerPhone)) {
         Response::badRequest(['customer_phone' => 'Phone format is invalid']);
     }
-    if ($customerAddress === '') {
-        Response::badRequest(['customer_address' => 'Address is required']);
-    }
-    if (!is_array($items) || count($items) === 0) {
-        Response::badRequest(['items' => 'Cart is empty']);
+
+    if ($customerEmail !== '' && !validateEmail($customerEmail)) {
+        Response::badRequest(['email' => 'Email format is invalid']);
     }
 
-    $cartItems = [];
-    foreach ($items as $item) {
-        $productId = $item['product_id'] ?? $item['id'] ?? null;
-        $quantity = (int)($item['quantity'] ?? 0);
+    if ($deliveryType === 'delivery') {
+        $missingAddress = [];
+        if ($streetAddress === '') $missingAddress['customer_address'] = 'Address is required';
+        if ($province === '') $missingAddress['province'] = 'Province is required';
+        if ($ward === '') $missingAddress['ward'] = 'Ward is required';
 
-        if (!validatePositiveInt($productId) || $quantity < 1) {
-            Response::badRequest(['items' => 'Invalid cart item']);
+        if (!empty($missingAddress)) {
+            Response::badRequest($missingAddress);
         }
-
-        if (!isset($cartItems[$productId])) {
-            $cartItems[$productId] = [
-                'product_id' => (int)$productId,
-                'quantity' => 0,
-                'note' => sanitizeString($item['note'] ?? '')
-            ];
-        }
-        $cartItems[$productId]['quantity'] += $quantity;
     }
+
+    $paymentMap = [
+        'cod' => 'COD',
+        'bank_card' => 'bank_card',
+        'e_wallet' => 'e_wallet',
+        'bank_transfer' => 'bank_transfer'
+    ];
+    $paymentKey = strtolower(trim($input['payment_method'] ?? 'cod'));
+    $paymentMethod = $paymentMap[$paymentKey] ?? 'COD';
+
+    $deliveryDate = $input['delivery_date'] ?? date('Y-m-d');
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)$deliveryDate)) {
+        $deliveryDate = date('Y-m-d');
+    }
+
+    $deliveryTime = sanitizeString($input['delivery_time'] ?? 'asap');
+    $notes = trim($input['notes'] ?? '');
+    $vatInvoice = checkoutParseBool($input['vat_invoice'] ?? false);
+    $saveInfo = checkoutParseBool($input['save_info'] ?? false);
+
+    $noteParts = [];
+    if ($notes !== '') {
+        $noteParts[] = sanitizeString($notes);
+    }
+    if ($vatInvoice) {
+        $noteParts[] = 'Yêu cầu xuất hóa đơn VAT.';
+    }
+    $orderNotes = implode("\n", $noteParts);
 
     $pdo->beginTransaction();
 
-    $productStmt = $pdo->prepare("SELECT id, title, price FROM products WHERE id = ? AND status = 1");
-    $orderItems = [];
-    $subtotal = 0;
+    $totals = checkoutCalculateTotals(
+        $pdo,
+        $currentUser['id'],
+        $items,
+        $deliveryType,
+        $couponCode,
+        true
+    );
 
-    foreach ($cartItems as $cartItem) {
-        $productStmt->execute([$cartItem['product_id']]);
-        $product = $productStmt->fetch();
-
-        if (!$product) {
-            throw new Exception('Product not found or unavailable: ' . $cartItem['product_id']);
-        }
-
-        $price = (float)$product['price'];
-        $lineTotal = $price * $cartItem['quantity'];
-        $subtotal += $lineTotal;
-        $orderItems[] = [
-            'product_id' => (int)$product['id'],
-            'title' => $product['title'],
-            'quantity' => $cartItem['quantity'],
-            'price' => $price,
-            'note' => $cartItem['note']
-        ];
-    }
-
-    $deliveryType = ($input['delivery_type'] ?? 'delivery') === 'pickup' ? 'pickup' : 'delivery';
-    $shippingFee = $deliveryType === 'delivery' ? 30000 : 0;
-    $totalAmount = $subtotal + $shippingFee;
-    $deliveryDate = $input['delivery_date'] ?? date('Y-m-d');
-    $deliveryTime = $input['delivery_time'] ?? null;
-    $notes = sanitizeString($input['notes'] ?? '');
+    $finalAmount = (float)$totals['final_amount'];
+    $pointsEarned = (int)floor($finalAmount / 10000);
+    $coupon = $totals['coupon'];
 
     $orderStmt = $pdo->prepare(
         "INSERT INTO orders
-         (user_id, total_amount, shipping_fee, delivery_type, delivery_date, delivery_time,
-          customer_name, customer_phone, customer_address, notes, status, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())"
+         (user_id, total_amount, shipping_fee, coupon_id, coupon_code, discount_amount,
+          points_earned, points_used, final_amount, delivery_type, delivery_date, delivery_time,
+          customer_name, customer_phone, customer_address, notes, status, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW(), NOW())"
     );
 
     $orderStmt->execute([
-        $currentUser['id'],
-        $totalAmount,
-        $shippingFee,
+        (int)$currentUser['id'],
+        $finalAmount,
+        $totals['shipping_fee'],
+        $coupon['coupon_id'] ?? null,
+        $coupon['coupon_code'] ?? null,
+        $totals['discount_amount'],
+        $pointsEarned,
+        $finalAmount,
         $deliveryType,
         $deliveryDate,
         $deliveryTime,
         sanitizeString($customerName),
         sanitizeString($customerPhone),
         sanitizeString($customerAddress),
-        $notes
+        $orderNotes
     ]);
 
-    $orderId = $pdo->lastInsertId();
+    $orderId = (int)$pdo->lastInsertId();
+
     $itemStmt = $pdo->prepare(
         "INSERT INTO order_items (order_id, product_id, quantity, price, note)
          VALUES (?, ?, ?, ?, ?)"
     );
 
-    foreach ($orderItems as $item) {
+    foreach ($totals['items'] as $item) {
         $itemStmt->execute([
             $orderId,
             $item['product_id'],
@@ -152,27 +152,84 @@ try {
         ]);
     }
 
+    if ($coupon) {
+        $couponUseStmt = $pdo->prepare(
+            "UPDATE user_coupons
+             SET is_used = 1, used_order_id = ?, used_at = NOW()
+             WHERE id = ? AND user_id = ? AND is_used = 0"
+        );
+        $couponUseStmt->execute([
+            $orderId,
+            $coupon['user_coupon_id'],
+            (int)$currentUser['id']
+        ]);
+
+        if ($couponUseStmt->rowCount() !== 1) {
+            throw new Exception('Mã giảm giá đã được sử dụng hoặc không còn hợp lệ.');
+        }
+
+        $couponCountStmt = $pdo->prepare("UPDATE coupons SET used_count = used_count + 1, updated_at = NOW() WHERE id = ?");
+        $couponCountStmt->execute([$coupon['coupon_id']]);
+    }
+
     $paymentStmt = $pdo->prepare(
-        "INSERT INTO payments (order_id, amount, payment_method, payment_status, created_at)
-         VALUES (?, ?, 'COD', 'pending', NOW())"
+        "INSERT INTO payments (order_id, amount, payment_method, payment_status, created_at, updated_at)
+         VALUES (?, ?, ?, 'pending', NOW(), NOW())"
     );
-    $paymentStmt->execute([$orderId, $totalAmount]);
+    $paymentStmt->execute([$orderId, $finalAmount, $paymentMethod]);
+
+    if ($pointsEarned > 0) {
+        $pointsStmt = $pdo->prepare(
+            "INSERT INTO user_points (user_id, points, lifetime_points, created_at, updated_at)
+             VALUES (?, ?, ?, NOW(), NOW())
+             ON DUPLICATE KEY UPDATE
+                points = points + VALUES(points),
+                lifetime_points = lifetime_points + VALUES(lifetime_points),
+                updated_at = NOW()"
+        );
+        $pointsStmt->execute([(int)$currentUser['id'], $pointsEarned, $pointsEarned]);
+
+        $pointTransactionStmt = $pdo->prepare(
+            "INSERT INTO point_transactions (user_id, order_id, points, type, description, created_at)
+             VALUES (?, ?, ?, 'earn', ?, NOW())"
+        );
+        $pointTransactionStmt->execute([
+            (int)$currentUser['id'],
+            $orderId,
+            $pointsEarned,
+            'Cộng điểm từ đơn hàng #' . $orderId
+        ]);
+    }
+
+    checkoutMaybeSaveUserInfo(
+        $pdo,
+        $currentUser['id'],
+        $customerName,
+        $customerEmail,
+        $customerAddress,
+        $saveInfo
+    );
 
     $pdo->commit();
 
     Response::success([
         'order_id' => $orderId,
-        'subtotal' => $subtotal,
-        'shipping_fee' => $shippingFee,
-        'total_amount' => $totalAmount,
-        'payment_method' => 'COD'
-    ], 'Order created successfully', 201);
+        'subtotal' => $totals['subtotal'],
+        'base_shipping_fee' => $totals['base_shipping_fee'],
+        'shipping_fee' => $totals['shipping_fee'],
+        'discount_amount' => $totals['discount_amount'],
+        'final_amount' => $finalAmount,
+        'coupon' => $coupon,
+        'points_earned' => $pointsEarned,
+        'payment_method' => $paymentMethod
+    ], 'Đặt hàng thành công', 201);
 } catch (Exception $e) {
-    if ($pdo->inTransaction()) {
+    if (isset($pdo) && $pdo->inTransaction()) {
         $pdo->rollBack();
     }
 
     logError('Checkout create order failed', ['error' => $e->getMessage()]);
-    Response::error(DEBUG_MODE ? $e->getMessage() : 'Failed to create order', 400);
+    Response::error(DEBUG_MODE ? $e->getMessage() : 'Không thể tạo đơn hàng', 400);
 }
+
 ?>

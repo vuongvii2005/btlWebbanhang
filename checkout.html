@@ -1,85 +1,390 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Thanh toán - Vy Food</title>
-    <link rel="stylesheet" href="assets/css/checkout.css">
+    <title>Thanh toán - VY FOOD</title>
+    <link rel="stylesheet" href="./assets/css/main.css?v=2">
     <link rel="stylesheet" href="./assets/font/font-awesome-pro-v6-6.2.0/css/all.min.css">
+    <link rel="stylesheet" href="assets/css/footer.css">
+    <link rel="stylesheet" href="assets/css/cart.css">
+    <link rel="stylesheet" href="assets/css/auth.css?v=2">
+    <link rel="stylesheet" href="assets/css/checkout.css?v=4">
 </head>
-<body>
-    <div class="checkout-container">
-        <div class="checkout-main">
-            <a href="index.html" class="back-link"><i class="fas fa-arrow-left"></i> Quay lại</a>
-            <h1>Thanh toán</h1>
 
-            <div class="checkout-section">
-                <h2>THÔNG TIN ĐƠN HÀNG</h2>
-                <p>Hình thức giao nhận</p>
-                <div class="option-group">
-                    <button class="option-btn active" id="btn-delivery" type="button"><i class="fas fa-truck"></i> Giao tận nơi</button>
-                    <button class="option-btn" id="btn-pickup" type="button"><i class="fas fa-store"></i> Tự đến lấy</button>
+<body class="checkout-page">
+    <header>
+        <div class="header-middle">
+            <div class="container">
+                <div class="header-middle-left">
+                    <div class="header-logo">
+                        <a href="index.html" aria-label="VY FOOD">
+                            <img src="./assets/img/vy-food.png" alt="VY FOOD" class="header-logo-img">
+                        </a>
+                    </div>
                 </div>
 
-                <p>Ngày giao hàng</p>
-                <div class="option-group">
-                    <button class="option-btn active" id="date-today" type="button" data-offset="0">Hôm nay</button>
-                    <button class="option-btn" id="date-tomorrow" type="button" data-offset="1">Ngày mai</button>
-                    <button class="option-btn" id="date-day-after" type="button" data-offset="2">Ngày kia</button>
+                <div class="header-middle-center">
+                    <form action="index.html" class="form-search">
+                        <span class="search-btn"><i class="fa-light fa-magnifying-glass"></i></span>
+                        <input type="text" class="form-search-input" name="q" placeholder="Tìm kiếm món ăn...">
+                        <button class="filter-btn" type="submit">
+                            <i class="fa-light fa-magnifying-glass"></i>
+                            <span>Tìm kiếm</span>
+                        </button>
+                    </form>
                 </div>
 
-                <p>Thời gian giao hàng</p>
-                <div class="radio-group">
-                    <label><input type="radio" name="delivery-time" value="asap" checked> Giao ngay khi xong</label>
-                    <label><input type="radio" name="delivery-time" value="timed"> Giao vào giờ <input type="time" id="specific-time" value="08:00"></label>
-                </div>
+                <div class="header-middle-right">
+                    <ul class="main-menu">
+                        <li class="main-menu-gh">
+                            <a href="index.html" class="cart-icon checkout-cart-link" aria-label="Giỏ hàng">
+                                <i class="fa-light fa-basket-shopping"></i>
+                                <span class="count-product-cart">0</span>
+                            </a>
+                            <div class="cart-text-group">
+                                <a href="index.html" class="cart-text">Giỏ hàng</a>
+                                <a href="history.html" class="history-link">Xem lịch sử mua hàng</a>
+                            </div>
+                        </li>
 
-                <p>Ghi chú đơn hàng</p>
-                <textarea id="order-notes" placeholder="Nhập ghi chú..."></textarea>
-            </div>
-
-            <div class="checkout-section">
-                <h2>THÔNG TIN NGƯỜI NHẬN</h2>
-                <input type="text" id="customer-name" name="customer_name" placeholder="Tên người nhận">
-                <input type="tel" id="customer-phone" name="customer_phone" placeholder="Số điện thoại">
-                <input type="text" id="customer-address" name="customer_address" placeholder="Địa chỉ giao hàng">
-                <input type="email" id="customer-email" name="email" placeholder="Email" readonly>
-            </div>
-
-            <div class="checkout-section">
-                <h2>PHƯƠNG THỨC THANH TOÁN</h2>
-                <label class="payment-method">
-                    <input type="radio" name="payment-method" value="COD" checked>
-                    COD - Thanh toán khi nhận hàng
-                </label>
-            </div>
-        </div>
-
-        <div class="checkout-sidebar">
-            <div class="order-summary">
-                <h2>Đơn hàng</h2>
-                <div id="summary-items"></div>
-                <div class="summary-row">
-                    <span>Tiền hàng</span>
-                    <span id="summary-subtotal">0 ₫</span>
+                        <li class="main-menu-login">
+                            <div class="user-actions checkout-user-actions">
+                                <div class="checkout-user-chip" role="button" tabindex="0" aria-expanded="false" aria-haspopup="true">
+                                    <img id="checkoutHeaderAvatar" class="header-user-avatar" src="assets/img/avt_mac_dinh.jpg" alt="Tài khoản">
+                                    <span id="checkoutHeaderName" class="greeting-text">Tài khoản</span>
+                                    <i class="fa-light fa-caret-down"></i>
+                                </div>
+                                <div class="user-dropdown-menu checkout-user-menu">
+                                    <a href="profile.html" class="user-menu-item">
+                                        <i class="fa-light fa-user"></i> Thông tin tài khoản
+                                    </a>
+                                    <a href="javascript:void(0)" class="user-menu-item logout-item" onclick="checkoutLogout()">
+                                        <i class="fa-light fa-right-from-bracket"></i> Đăng xuất
+                                    </a>
+                                </div>
+                            </div>
+                        </li>
+                    </ul>
                 </div>
-                <div class="summary-row" id="shipping-fee-row">
-                    <span>Phí vận chuyển</span>
-                    <span id="summary-shipping">30.000 ₫</span>
-                </div>
-                <hr>
-                <div class="summary-row total">
-                    <span>Tổng cộng</span>
-                    <span id="summary-total">0 ₫</span>
-                </div>
-                <button class="place-order-btn" id="placeOrderBtn" type="button" onclick="placeOrder()">Đặt hàng</button>
-                <p id="checkout-message" class="checkout-message"></p>
-                <p class="terms">Bằng việc bấm vào nút "Đặt hàng", bạn đồng ý với chính sách hoạt động của chúng tôi.</p>
             </div>
         </div>
-    </div>
+    </header>
+
+    <main class="checkout-page-main">
+        <div class="checkout-container">
+            <h1 class="checkout-title">Thanh toán</h1>
+
+            <div id="emptyCheckout" class="empty-checkout" hidden>
+                <div class="empty-checkout-icon"><i class="fa-light fa-basket-shopping"></i></div>
+                <h2>Giỏ hàng của bạn đang trống</h2>
+                <p>Hãy chọn vài món ngon của VY FOOD rồi quay lại thanh toán.</p>
+                <a href="index.html" class="checkout-secondary-link">Quay lại thực đơn</a>
+            </div>
+
+            <div id="checkoutLayout" class="checkout-layout">
+                <section class="checkout-form-column" aria-label="Thông tin thanh toán">
+                    <form id="checkoutForm" novalidate>
+                        <article class="checkout-card">
+                            <div class="checkout-card-heading">
+                                <i class="fa-light fa-house-heart"></i>
+                                <h2>Thông tin nhận hàng</h2>
+                            </div>
+
+                            <div class="checkout-grid two">
+                                <label class="checkout-field">
+                                    <span>Họ và tên <b>*</b></span>
+                                    <input id="customerName" name="customer_name" type="text" autocomplete="name" placeholder="Nhập họ và tên" required>
+                                </label>
+                                <label class="checkout-field">
+                                    <span>Số điện thoại <b>*</b></span>
+                                    <input id="customerPhone" name="customer_phone" type="tel" autocomplete="tel" placeholder="Nhập số điện thoại" required>
+                                </label>
+                            </div>
+
+                            <label class="checkout-field">
+                                <span>Email</span>
+                                <input id="customerEmail" name="email" type="email" autocomplete="email" placeholder="Nhập email (không bắt buộc)">
+                            </label>
+
+                            <label class="checkout-field">
+                                <span>Địa chỉ nhận hàng <b>*</b></span>
+                                <input id="customerAddress" name="customer_address" type="text" autocomplete="street-address" placeholder="Số nhà, tên đường, tòa nhà, căn hộ..." required>
+                            </label>
+
+                            <div class="checkout-grid two">
+                                <label class="checkout-field">
+                                    <span>Tỉnh/Thành phố <b>*</b></span>
+                                    <input id="customerProvince" name="province" type="text" placeholder="Nhập tỉnh/thành phố" required>
+                                </label>
+                                <label class="checkout-field">
+                                    <span>Phường/Xã <b>*</b></span>
+                                    <input id="customerWard" name="ward" type="text" placeholder="Nhập phường/xã" required>
+                                </label>
+                            </div>
+                        </article>
+
+                        <div class="checkout-card-row">
+                            <article class="checkout-card">
+                                <div class="checkout-card-heading">
+                                    <i class="fa-light fa-location-dot"></i>
+                                    <h2>Hình thức nhận hàng</h2>
+                                </div>
+
+                                <div class="choice-tabs" role="radiogroup" aria-label="Hình thức nhận hàng">
+                                    <label class="choice-tab active" data-delivery-tab="delivery">
+                                        <input type="radio" name="delivery_type" value="delivery" checked>
+                                        <i class="fa-light fa-truck-fast"></i>
+                                        <span>Giao tận nơi</span>
+                                    </label>
+                                    <label class="choice-tab" data-delivery-tab="pickup">
+                                        <input type="radio" name="delivery_type" value="pickup">
+                                        <i class="fa-light fa-store"></i>
+                                        <span>Nhận tại cửa hàng</span>
+                                    </label>
+                                </div>
+
+                                <div id="deliveryOptions" class="delivery-options">
+                                    <label class="delivery-option active">
+                                        <input type="radio" name="delivery_time_type" value="asap" checked>
+                                        <i class="fa-light fa-bolt"></i>
+                                        <span>Giao nhanh trong 30 - 45 phút</span>
+                                        <strong>25.000đ</strong>
+                                    </label>
+                                    <label class="delivery-option">
+                                        <input type="radio" name="delivery_time_type" value="scheduled">
+                                        <i class="fa-light fa-calendar-clock"></i>
+                                        <span>Đặt lịch giao hàng</span>
+                                        <input id="scheduledTime" type="datetime-local" aria-label="Thời gian giao hàng mong muốn">
+                                    </label>
+                                </div>
+
+                                <p id="pickupNote" class="checkout-soft-note" hidden>Bạn sẽ nhận đơn tại cửa hàng VY FOOD.</p>
+                            </article>
+
+                            <article class="checkout-card">
+                                <div class="checkout-card-heading">
+                                    <i class="fa-light fa-credit-card"></i>
+                                    <h2>Phương thức thanh toán</h2>
+                                </div>
+
+                                <div class="payment-list" role="radiogroup" aria-label="Phương thức thanh toán">
+                                    <label class="payment-option active">
+                                        <input type="radio" name="payment_method" value="cod" checked>
+                                        <span class="payment-dot"></span>
+                                        <i class="fa-light fa-money-bill-wave"></i>
+                                        <span>
+                                            <strong>Thanh toán khi nhận hàng (COD)</strong>
+                                            <small>Thanh toán bằng tiền mặt khi nhận hàng</small>
+                                        </span>
+                                    </label>
+                                    <label class="payment-option">
+                                        <input type="radio" name="payment_method" value="bank_card">
+                                        <span class="payment-dot"></span>
+                                        <i class="fa-light fa-credit-card"></i>
+                                        <span>
+                                            <strong>Thẻ ngân hàng</strong>
+                                            <small>Visa, MasterCard, JCB...</small>
+                                        </span>
+                                    </label>
+                                    <label class="payment-option">
+                                        <input type="radio" name="payment_method" value="e_wallet">
+                                        <span class="payment-dot"></span>
+                                        <i class="fa-light fa-wallet"></i>
+                                        <span>
+                                            <strong>Ví điện tử</strong>
+                                            <small>MoMo, ZaloPay, ShopeePay...</small>
+                                        </span>
+                                    </label>
+                                    <label class="payment-option">
+                                        <input type="radio" name="payment_method" value="bank_transfer">
+                                        <span class="payment-dot"></span>
+                                        <i class="fa-light fa-building-columns"></i>
+                                        <span>
+                                            <strong>Chuyển khoản</strong>
+                                            <small>Chuyển khoản qua ngân hàng</small>
+                                        </span>
+                                    </label>
+                                </div>
+                            </article>
+                        </div>
+
+                        <article class="checkout-card">
+                            <div class="checkout-card-heading">
+                                <i class="fa-light fa-pen-to-square"></i>
+                                <h2>Ghi chú đơn hàng</h2>
+                            </div>
+
+                            <textarea id="orderNotes" rows="4" placeholder="Ví dụ: Không cay, ít ớt, gọi trước khi giao,..."></textarea>
+
+                            <div class="checkout-checks">
+                                <label class="checkout-check">
+                                    <input id="vatInvoice" type="checkbox">
+                                    <span>Xuất hóa đơn VAT</span>
+                                </label>
+                                <label class="checkout-check">
+                                    <input id="saveInfo" type="checkbox" checked>
+                                    <span>Lưu thông tin cho lần sau</span>
+                                </label>
+                            </div>
+                        </article>
+                    </form>
+                </section>
+
+                <aside class="checkout-summary-column">
+                    <article class="checkout-card order-summary-card">
+                        <div class="checkout-card-heading">
+                            <i class="fa-light fa-bag-shopping"></i>
+                            <h2>Đơn hàng của bạn</h2>
+                        </div>
+
+                        <div id="summaryItems" class="summary-items"></div>
+
+                        <div class="coupon-box">
+                            <div class="coupon-input-wrap">
+                                <i class="fa-light fa-ticket"></i>
+                                <input id="couponCode" type="text" placeholder="Nhập mã giảm giá" autocomplete="off">
+                            </div>
+                            <button id="applyCouponBtn" class="coupon-apply-btn" type="button">Áp dụng</button>
+                        </div>
+                        <p id="couponMessage" class="checkout-message" aria-live="polite"></p>
+
+                        <div class="summary-totals">
+                            <div class="summary-row">
+                                <span>Tạm tính</span>
+                                <strong id="subtotalAmount">0đ</strong>
+                            </div>
+                            <div class="summary-row">
+                                <span>Phí giao hàng <i class="fa-light fa-circle-info"></i></span>
+                                <strong id="shippingAmount">0đ</strong>
+                            </div>
+                            <div class="summary-row">
+                                <span>Giảm giá <i class="fa-light fa-circle-info"></i></span>
+                                <strong id="discountAmount" class="discount-value">-0đ</strong>
+                            </div>
+                            <div class="summary-total">
+                                <span>Tổng thanh toán</span>
+                                <strong id="finalAmount">0đ</strong>
+                            </div>
+                        </div>
+
+                        <button id="placeOrderBtn" class="place-order-btn" type="button">
+                            <i class="fa-solid fa-lock"></i>
+                            <span>Đặt hàng ngay</span>
+                        </button>
+
+                        <p id="checkoutMessage" class="checkout-message order-message" aria-live="polite"></p>
+
+                        <div class="checkout-trust">
+                            <p><i class="fa-light fa-shield-check"></i> Thông tin của bạn được bảo mật tuyệt đối</p>
+                            <p>Bằng việc đặt hàng, bạn đồng ý với <a href="#">điều khoản</a> của VY FOOD</p>
+                        </div>
+                    </article>
+                </aside>
+            </div>
+        </div>
+    </main>
+
+    <section class="checkout-service-strip" aria-label="Cam kết dịch vụ">
+        <div class="checkout-service-inner">
+            <div class="checkout-service-item">
+                <i class="fa-light fa-truck-fast"></i>
+                <span><strong>Giao hàng nhanh</strong><small>Giao trong 30 - 45 phút</small></span>
+            </div>
+            <div class="checkout-service-item">
+                <i class="fa-light fa-shield-heart"></i>
+                <span><strong>Sản phẩm an toàn</strong><small>Cam kết chất lượng</small></span>
+            </div>
+            <div class="checkout-service-item">
+                <i class="fa-light fa-headset"></i>
+                <span><strong>Hỗ trợ 24/7</strong><small>Tất cả ngày trong tuần</small></span>
+            </div>
+            <div class="checkout-service-item">
+                <i class="fa-light fa-badge-dollar"></i>
+                <span><strong>Hoàn tiền 100%</strong><small>Nếu không hài lòng</small></span>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-top">
+                <div class="footer-top-left">
+                    <img src="assets/img/vy-food.png" alt="VY FOOD">
+                </div>
+                <div class="footer-top-center">
+                    <h2>ĐĂNG KÍ NHẬN TIN</h2>
+                    <p>Nhận thông tin mới nhất từ chúng tôi</p>
+                </div>
+                <div class="footer-top-right">
+                    <input class="footer-top-right-input" placeholder="Nhập email của bạn...">
+                    <button class="footer-top-right-button" type="button">
+                        <span>ĐĂNG KÍ</span>
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <div class="container1">
+                    <div class="footer-bottom-item">
+                        <h3>VỀ CHÚNG TÔI</h3>
+                        <p>VY FOOD phục vụ những món ăn tươi ngon, nhanh chóng và chỉn chu cho mỗi bữa ăn của bạn.</p>
+                        <div class="footer-bottom-item-social">
+                            <a href="#" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+                            <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+                            <a href="#" aria-label="YouTube"><i class="fab fa-youtube"></i></a>
+                            <a href="#" aria-label="TikTok"><i class="fab fa-tiktok"></i></a>
+                        </div>
+                    </div>
+
+                    <div class="footer-bottom-item">
+                        <div class="footer-bottom-item-border1">
+                            <h3>CHÍNH SÁCH</h3>
+                            <ul>
+                                <li><a href="#"><i class="fas fa-arrow-right"></i> Chính sách giao hàng</a></li>
+                                <li><a href="#"><i class="fas fa-arrow-right"></i> Chính sách đổi trả</a></li>
+                                <li><a href="#"><i class="fas fa-arrow-right"></i> Chính sách bảo mật</a></li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="footer-bottom-item">
+                        <div class="footer-bottom-item-border2">
+                            <h3>HỖ TRỢ KHÁCH HÀNG</h3>
+                            <ul>
+                                <li><a href="#"><i class="fas fa-arrow-right"></i> Liên hệ</a></li>
+                                <li><a href="#"><i class="fas fa-arrow-right"></i> Câu hỏi thường gặp</a></li>
+                                <li><a href="#"><i class="fas fa-arrow-right"></i> Hướng dẫn đặt hàng</a></li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="footer-bottom-item">
+                        <h3>LIÊN HỆ</h3>
+                        <div class="contact-info">
+                            <div class="contact-item">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <span>273 An Dương Vương, Phường 3, Quận 5, TP HN</span>
+                            </div>
+                            <div class="contact-item">
+                                <i class="fas fa-phone-alt"></i>
+                                <a href="tel:0123456789">0123 456 789</a>
+                            </div>
+                            <div class="contact-item">
+                                <i class="fas fa-envelope"></i>
+                                <a href="mailto:abc@domain.com">abc@domain.com</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
 
     <script src="js/app-utils.js"></script>
-    <script src="js/checkout.js"></script>
+    <script src="js/checkout.js?v=3"></script>
 </body>
+
 </html>
