@@ -1,6 +1,6 @@
 <?php
 /**
- * 👤 USER MODEL - Quản lý người dùng
+ * USER MODEL - Quản lý người dùng
  */
 
 class User {
@@ -9,6 +9,26 @@ class User {
     
     public function __construct($pdo) {
         $this->pdo = $pdo;
+    }
+
+    private function hasUserColumn($column) {
+        $stmt = $this->pdo->prepare(
+            "SELECT COUNT(*)
+             FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE()
+               AND TABLE_NAME = 'users'
+               AND COLUMN_NAME = ?"
+        );
+        $stmt->execute([$column]);
+        return (int)$stmt->fetchColumn() > 0;
+    }
+
+    private function selectUserColumns($columns) {
+        if ($this->hasUserColumn('avatar_url')) {
+            $columns[] = 'avatar_url';
+        }
+
+        return implode(', ', $columns);
     }
     
     /**
@@ -120,8 +140,9 @@ class User {
         $identifier = sanitizeString($identifier);
         
         // Find user by phone or email
+        $columns = $this->selectUserColumns(['id', 'fullname', 'phone', 'email', 'password', 'role', 'status']);
         $stmt = $this->pdo->prepare(
-            "SELECT id, fullname, phone, email, password, role, status FROM users WHERE phone = ? OR email = ?"
+            "SELECT $columns FROM users WHERE phone = ? OR email = ?"
         );
         $stmt->execute([$identifier, $identifier]);
         $user = $stmt->fetch();
@@ -169,6 +190,7 @@ class User {
                 'fullname' => $user['fullname'],
                 'phone' => $user['phone'],
                 'email' => $user['email'],
+                'avatar_url' => $user['avatar_url'] ?? null,
                 'role' => $user['role']
             ]
         ];
@@ -254,11 +276,18 @@ class User {
      * Lấy thông tin user
      */
     public function getById($id) {
+        $columns = $this->selectUserColumns(['id', 'fullname', 'phone', 'email', 'address', 'role', 'status', 'created_at']);
         $stmt = $this->pdo->prepare(
-            "SELECT id, fullname, phone, email, address, role, status, created_at FROM users WHERE id = ?"
+            "SELECT $columns FROM users WHERE id = ?"
         );
         $stmt->execute([$id]);
-        return $stmt->fetch();
+        $user = $stmt->fetch();
+
+        if ($user && !array_key_exists('avatar_url', $user)) {
+            $user['avatar_url'] = null;
+        }
+
+        return $user;
     }
     
     /**

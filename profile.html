@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thông tin tài khoản - VY FOOD</title>
+    <link rel="stylesheet" href="./assets/css/main.css">
+    <link rel="stylesheet" href="./assets/font/font-awesome-pro-v6-6.2.0/css/all.min.css">
+    <link rel="stylesheet" href="assets/css/auth.css?v=2">
+    <link rel="stylesheet" href="assets/css/profile.css?v=2">
+</head>
+
+<body>
+    <header>
+        <div class="header-middle">
+            <div class="container">
+                <div class="header-middle-left">
+                    <div class="header-logo">
+                        <a href="index.html">
+                            <img src="./assets/img/vy-food.png" alt="VY FOOD" class="header-logo-img">
+                        </a>
+                    </div>
+                </div>
+                <div class="header-middle-center">
+                    <form action="" class="form-search" onsubmit="return false;">
+                        <span class="search-btn"><i class="fa-light fa-magnifying-glass"></i></span>
+                        <input type="text" class="form-search-input" placeholder="Tìm kiếm món ăn...">
+                        <button class="filter-btn" type="button"><i class="fa-light fa-filter-list"></i><span>Lọc</span></button>
+                    </form>
+                </div>
+                <div class="header-middle-right">
+                    <ul class="main-menu">
+                        <li class="main-menu-gh">
+                            <a href="index.html" class="cart-icon profile-cart-link">
+                                <i class="fa-light fa-basket-shopping"></i>
+                                <span class="count-product-cart">0</span>
+                            </a>
+                            <div class="cart-text-group">
+                                <a href="index.html" class="cart-text">Giỏ hàng</a>
+                                <a href="history.html" class="history-link">Xem lịch sử mua hàng</a>
+                            </div>
+                        </li>
+
+                        <li class="main-menu-login">
+                            <div class="user-actions">
+                                <span class="greeting-text">
+                                    <i class="fa-light fa-user-circle"></i>
+                                    <span>Tài khoản</span>
+                                </span>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <nav class="header-bottom">
+        <div class="container">
+            <ul class="menu-list">
+                <li class="menu-list-item"><a href="index.html" class="menu-link">Trang chủ</a></li>
+                <li class="menu-list-item"><a href="index.html" class="menu-link">Món chay</a></li>
+                <li class="menu-list-item"><a href="index.html" class="menu-link">Món mặn</a></li>
+                <li class="menu-list-item"><a href="index.html" class="menu-link">Món lẩu</a></li>
+                <li class="menu-list-item"><a href="index.html" class="menu-link">Món ăn vặt</a></li>
+                <li class="menu-list-item"><a href="index.html" class="menu-link">Món tráng miệng</a></li>
+                <li class="menu-list-item"><a href="index.html" class="menu-link">Nước uống</a></li>
+                <li class="menu-list-item"><a href="index.html" class="menu-link">Món khác</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="profile-page">
+        <div id="profileMessage" class="profile-message" role="status"></div>
+
+        <section class="profile-layout" aria-label="Thông tin tài khoản">
+            <aside class="profile-sidebar">
+                <div class="profile-user-card">
+                    <img id="sidebarAvatar" class="profile-sidebar-avatar" src="assets/img/avt_mac_dinh.jpg" alt="Ảnh đại diện" role="button" tabindex="0">
+                    <h1 id="sidebarName">Tài khoản</h1>
+                    <p>Tài khoản khách hàng</p>
+                </div>
+
+                <nav class="profile-side-menu" aria-label="Menu tài khoản">
+                    <button class="profile-side-item active" type="button">
+                        <i class="fa-light fa-user"></i>
+                        Thông tin tài khoản
+                    </button>
+                    <a class="profile-side-item" href="history.html">
+                        <i class="fa-light fa-bag-shopping"></i>
+                        Đơn hàng của tôi
+                    </a>
+                    <button class="profile-side-item" type="button" id="focusAddressBtn">
+                        <i class="fa-light fa-location-dot"></i>
+                        Địa chỉ giao hàng
+                    </button>
+                    <button class="profile-side-item" type="button" id="changePasswordBtn">
+                        <i class="fa-light fa-lock"></i>
+                        Đổi mật khẩu
+                    </button>
+                    <button class="profile-side-item" type="button" id="favoriteBtn">
+                        <i class="fa-light fa-heart"></i>
+                        Món yêu thích
+                    </button>
+                    <button class="profile-side-item logout" type="button" id="logoutBtn">
+                        <i class="fa-light fa-arrow-right-from-bracket"></i>
+                        Đăng xuất
+                    </button>
+                </nav>
+            </aside>
+
+            <section class="profile-content">
+                <form id="profileForm" class="profile-card profile-form-card" novalidate>
+                    <h2>Thông tin tài khoản</h2>
+
+                    <div class="profile-form-grid">
+                        <label class="profile-field">
+                            <span>Họ và tên</span>
+                            <input type="text" id="fullname" name="fullname" autocomplete="name" required>
+                        </label>
+
+                        <div class="profile-avatar-editor">
+                            <span>Ảnh đại diện</span>
+                            <div class="profile-avatar-wrap">
+                                <img id="avatarPreview" class="profile-avatar-preview" src="assets/img/avt_mac_dinh.jpg" alt="Ảnh đại diện" role="button" tabindex="0">
+                                <button class="profile-avatar-camera" type="button" id="avatarFocusBtn" aria-label="Chọn ảnh đại diện">
+                                    <i class="fa-light fa-camera"></i>
+                                </button>
+                            </div>
+                            <input type="file" id="avatarFile" name="avatar_file" accept=".jpg,.jpeg,.png,.gif,.webp,image/jpeg,image/png,image/gif,image/webp" hidden>
+                            <small>Bấm vào ảnh để chọn JPG, PNG, GIF hoặc WEBP. Tối đa 2MB.</small>
+                        </div>
+
+                        <label class="profile-field">
+                            <span>Email</span>
+                            <input type="email" id="email" name="email" autocomplete="email">
+                        </label>
+
+                        <label class="profile-field">
+                            <span>Số điện thoại</span>
+                            <input type="tel" id="phone" name="phone" autocomplete="tel" required>
+                        </label>
+
+                        <label class="profile-field">
+                            <span>Địa chỉ</span>
+                            <input type="text" id="address" name="address" autocomplete="street-address">
+                        </label>
+
+                        <label class="profile-field">
+                            <span>Ngày tham gia</span>
+                            <span class="profile-readonly-input">
+                                <i class="fa-light fa-calendar"></i>
+                                <input type="text" id="createdAt" readonly>
+                            </span>
+                        </label>
+
+                    </div>
+
+                    <div class="profile-actions">
+                        <button class="profile-btn primary" id="saveProfileBtn" type="submit">
+                            <i class="fa-light fa-floppy-disk"></i>
+                            Lưu thay đổi
+                        </button>
+                        <button class="profile-btn light" id="cancelProfileBtn" type="button">Hủy</button>
+                    </div>
+                </form>
+
+                <section class="profile-stats-grid" aria-label="Thống kê tài khoản">
+                    <article class="profile-stat-card">
+                        <span class="profile-stat-icon"><i class="fa-light fa-bag-shopping"></i></span>
+                        <div>
+                            <p>Đơn hàng</p>
+                            <strong id="totalOrders">0</strong>
+                            <small>Tổng số đơn hàng</small>
+                        </div>
+                    </article>
+                    <article class="profile-stat-card">
+                        <span class="profile-stat-icon"><i class="fa-light fa-heart"></i></span>
+                        <div>
+                            <p>Yêu thích</p>
+                            <strong id="favoriteCount">0</strong>
+                            <small>Món ăn yêu thích</small>
+                        </div>
+                    </article>
+                    <article class="profile-stat-card">
+                        <span class="profile-stat-icon"><i class="fa-light fa-star"></i></span>
+                        <div>
+                            <p>Điểm tích lũy</p>
+                            <strong id="rewardPoints">0</strong>
+                            <small>Điểm thưởng hiện có</small>
+                        </div>
+                    </article>
+                </section>
+
+                <section class="profile-card recent-orders-card">
+                    <div class="profile-card-heading">
+                        <h2>Đơn hàng gần đây</h2>
+                        <a href="history.html">Xem tất cả đơn hàng <i class="fa-light fa-chevron-right"></i></a>
+                    </div>
+                    <div class="profile-table-wrap">
+                        <table class="profile-orders-table">
+                            <thead>
+                                <tr>
+                                    <th>Mã đơn hàng</th>
+                                    <th>Ngày đặt</th>
+                                    <th>Sản phẩm</th>
+                                    <th>Tổng tiền</th>
+                                    <th>Trạng thái</th>
+                                    <th>Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recentOrdersBody">
+                                <tr>
+                                    <td colspan="6" class="profile-empty-row">Đang tải đơn hàng...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </section>
+        </section>
+    </main>
+
+    <script src="js/app-utils.js"></script>
+    <script src="js/profile.js"></script>
+</body>
+
+</html>

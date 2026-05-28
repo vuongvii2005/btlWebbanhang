@@ -57,6 +57,70 @@ const productsContainer = document.querySelector('.product-list');
 const paginationList = document.querySelector('.page-nav-list');
 const homeTitleElement = document.getElementById("home-title");
 
+function initHeroSlider() {
+    const slider = document.querySelector('.hero-slider');
+    if (!slider) return;
+
+    const slides = Array.from(slider.querySelectorAll('.hero-slide'));
+    const prevBtn = slider.querySelector('.slider-prev');
+    const nextBtn = slider.querySelector('.slider-next');
+    const dotsWrap = slider.querySelector('.slider-dots');
+
+    if (slides.length <= 1 || !dotsWrap) return;
+
+    let currentSlide = 0;
+    let sliderTimer = null;
+
+    dotsWrap.innerHTML = slides.map((_, index) => `
+        <button class="slider-dot${index === 0 ? ' active' : ''}" type="button" aria-label="Chuyển đến banner ${index + 1}"></button>
+    `).join('');
+
+    const dots = Array.from(dotsWrap.querySelectorAll('.slider-dot'));
+
+    function showSlide(index) {
+        currentSlide = (index + slides.length) % slides.length;
+
+        slides.forEach((slide, slideIndex) => {
+            slide.classList.toggle('active', slideIndex === currentSlide);
+        });
+
+        dots.forEach((dot, dotIndex) => {
+            dot.classList.toggle('active', dotIndex === currentSlide);
+        });
+    }
+
+    function startAutoSlide() {
+        stopAutoSlide();
+        sliderTimer = setInterval(() => {
+            showSlide(currentSlide + 1);
+        }, 4000);
+    }
+
+    function stopAutoSlide() {
+        if (sliderTimer) {
+            clearInterval(sliderTimer);
+            sliderTimer = null;
+        }
+    }
+
+    function goToSlide(index) {
+        showSlide(index);
+        startAutoSlide();
+    }
+
+    prevBtn?.addEventListener('click', () => goToSlide(currentSlide - 1));
+    nextBtn?.addEventListener('click', () => goToSlide(currentSlide + 1));
+    dots.forEach((dot, index) => {
+        dot.addEventListener('click', () => goToSlide(index));
+    });
+
+    slider.addEventListener('mouseenter', stopAutoSlide);
+    slider.addEventListener('mouseleave', startAutoSlide);
+
+    showSlide(0);
+    startAutoSlide();
+}
+
 
 function renderProducts(productsData) {
     let productHtml = '';
@@ -152,6 +216,7 @@ function changePage(newPage) {
 
 
 document.addEventListener('DOMContentLoaded', async function () {
+    initHeroSlider();
 
     // �🔌 Load products from API
     try {

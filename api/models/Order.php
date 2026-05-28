@@ -1,6 +1,6 @@
 <?php
 /**
- * 📦 ORDER MODEL - Quản lý đơn hàng
+ * ORDER MODEL - Quản lý đơn hàng
  */
 
 class Order {

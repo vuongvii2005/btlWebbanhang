@@ -8,6 +8,7 @@ const AUTH_REGISTER_API = `${window.APP_API_URL}?controller=auth&action=register
 const AUTH_PROFILE_API = `${window.APP_API_URL}?controller=auth&action=profile`;
 const AUTH_LOGOUT_API = `${window.APP_API_URL}?controller=auth&action=logout`;
 const AUTH_CHANGE_PASSWORD_API = `${window.APP_API_URL}?controller=auth&action=change-password`;
+const AUTH_DEFAULT_AVATAR = 'assets/img/avt_mac_dinh.jpg';
 
 // ===== CHECK LOGIN STATUS ON PAGE LOAD =====
 async function checkLogin() {
@@ -242,25 +243,20 @@ function updateHeaderUI(user) {
 
     if (!userActions) return;
 
+    const avatarUrl = user.avatar_url || AUTH_DEFAULT_AVATAR;
+
     userActions.innerHTML = `
         <div class="user-menu-wrapper">
             <div class="user-greeting">
-                <i class="fa-light fa-user-circle"></i>
+                <img class="header-user-avatar" src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(user.fullname || 'Tài khoản')}" width="30" height="30">
                 <span class="greeting-text">${escapeHtml(user.fullname || 'Tài khoản')}</span>
                 <i class="fa-light fa-caret-down"></i>
             </div>
 
             <div class="user-dropdown-menu">
-                <a href="javascript:void(0)" class="user-menu-item" onclick="viewProfile()">
-                    <i class="fa-light fa-user"></i> Thông tin tài khoản
+                <a href="profile.html" class="user-menu-item">
+                    <img class="user-menu-avatar" src="${escapeHtml(avatarUrl)}" alt="" width="20" height="20"> Thông tin tài khoản
                 </a>
-                <a href="javascript:void(0)" class="user-menu-item" onclick="changePassword()">
-                    <i class="fa-light fa-key"></i> Đổi mật khẩu
-                </a>
-                <a href="history.html" class="user-menu-item">
-                    <i class="fa-light fa-history"></i> Lịch sử mua hàng
-                </a>
-                <div class="user-menu-divider"></div>
                 <a href="javascript:void(0)" class="user-menu-item logout-item" onclick="logout()">
                     <i class="fa-light fa-right-from-bracket"></i> Đăng xuất
                 </a>
@@ -272,6 +268,12 @@ function updateHeaderUI(user) {
     if (userGreeting) {
         userGreeting.addEventListener('click', toggleUserDropdown);
     }
+
+    document.querySelectorAll('.header-user-avatar, .user-menu-avatar').forEach((avatar) => {
+        avatar.addEventListener('error', () => {
+            avatar.src = AUTH_DEFAULT_AVATAR;
+        });
+    });
 }
 
 // ===== TOGGLE USER DROPDOWN MENU =====
@@ -290,7 +292,7 @@ function viewProfile() {
         disablePageScroll();
         return;
     }
-    alert(`Tên: ${user.fullname}\nSố điện thoại: ${user.phone}\nEmail: ${user.email || 'Chưa cập nhật'}`);
+    window.location.href = 'profile.html';
 }
 
 async function changePassword() {

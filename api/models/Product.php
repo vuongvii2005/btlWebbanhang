@@ -1,6 +1,6 @@
 <?php
 /**
- * 🍔 PRODUCT MODEL - Quản lý sản phẩm
+ * PRODUCT MODEL - Quản lý sản phẩm
  */
 
 class Product {

@@ -5,14 +5,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ban hang</title>
-    <link rel="stylesheet" href="./assets/css/main.css">
+    <link rel="stylesheet" href="./assets/css/main.css?v=2">
     <link rel="stylesheet" href="./assets/font/font-awesome-pro-v6-6.2.0/css/all.min.css" />
     <link rel="stylesheet" href="assets/css/turn-page.css">
     <link rel="stylesheet" href="assets/css/admin.css">
     <link rel="stylesheet" href="assets/css/footer.css">
     <link rel="stylesheet" href="assets/css/product.css">
     <link rel="stylesheet" href="assets/css/cart.css">
-    <link rel="stylesheet" href="assets/css/auth.css">
+    <link rel="stylesheet" href="assets/css/auth.css?v=2">
 </head>
 
 <body>
@@ -89,8 +89,22 @@
 
     <main class="main-wrapper">
         <div class="container">
-            <div class="home-slider">
-                <img src="./assets/img/banner-1.png" alt="">
+            <div class="hero-slider" aria-label="Banner khuyến mãi">
+                <div class="hero-slide active">
+                    <img src="./assets/images/banners/banner-1.png" alt="VY FOOD banner 1">
+                </div>
+                <div class="hero-slide">
+                    <img src="./assets/images/banners/banner-2.png" alt="VY FOOD banner 2">
+                </div>
+
+                <button class="slider-btn slider-prev" type="button" aria-label="Banner trước">
+                    <i class="fa-light fa-chevron-left"></i>
+                </button>
+                <button class="slider-btn slider-next" type="button" aria-label="Banner sau">
+                    <i class="fa-light fa-chevron-right"></i>
+                </button>
+
+                <div class="slider-dots" aria-label="Chọn banner"></div>
             </div>
             <div class="home-service">
                 <div class="home-service-item">
@@ -360,8 +374,8 @@
 
     <!-- Scripts -->
     <script src="js/app-utils.js"></script>
-    <script src="js/auth.js?v=2"></script>
-    <script src="js/main.js"></script>
+    <script src="js/auth.js?v=3"></script>
+    <script src="js/main.js?v=2"></script>
     <script src="js/cart.js"></script>
 </body>
 
