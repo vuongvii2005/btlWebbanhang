@@ -1,9 +1,11 @@
 const PROFILE_API_URL = 'api/profile.php';
 const PROFILE_COUPONS_API = 'api/user/coupons.php';
 const PROFILE_REDEEM_COUPON_API = 'api/user/redeem_coupon.php';
+const PROFILE_FAVORITES_API = `${window.APP_API_URL}?controller=favorite`;
 const AUTH_LOGOUT_URL = `${window.APP_API_URL}?controller=auth&action=logout`;
 const AUTH_CHANGE_PASSWORD_URL = `${window.APP_API_URL}?controller=auth&action=change-password`;
 const DEFAULT_AVATAR = 'assets/img/avt_mac_dinh.jpg';
+const DEFAULT_PRODUCT_IMAGE = 'assets/img/vy-food.png';
 const AVATAR_MAX_SIZE = 2 * 1024 * 1024;
 const AVATAR_ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 const AVATAR_ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
@@ -12,6 +14,10 @@ const profileState = {
     user: null,
     stats: null,
     recentOrders: [],
+    favorites: {
+        items: [],
+        loaded: false
+    },
     coupons: {
         points: 0,
         userCoupons: [],
@@ -181,6 +187,212 @@ function renderStats(stats = {}) {
     document.getElementById('totalOrders').textContent = formatNumber(stats.total_orders);
     document.getElementById('favoriteCount').textContent = formatNumber(stats.favorite_count);
     document.getElementById('rewardPoints').textContent = formatNumber(stats.points);
+}
+
+function getProductImageUrl(product = {}) {
+    return product.image_url || DEFAULT_PRODUCT_IMAGE;
+}
+
+function getProductDetailUrl(productId) {
+    return `index.html?product_id=${encodeURIComponent(productId)}`;
+}
+
+function updateFavoriteCount(count) {
+    const normalizedCount = Math.max(0, Number(count || 0));
+    const favoriteCount = document.getElementById('favoriteCount');
+
+    if (!profileState.stats) {
+        profileState.stats = {};
+    }
+
+    profileState.stats.favorite_count = normalizedCount;
+    if (favoriteCount) favoriteCount.textContent = formatNumber(normalizedCount);
+}
+
+function setFavoritesLoading() {
+    const list = document.getElementById('favoriteProductsList');
+    if (!list) return;
+
+    list.innerHTML = '<div class="favorite-loading">Đang tải món yêu thích...</div>';
+}
+
+function renderFavoritesEmpty() {
+    const list = document.getElementById('favoriteProductsList');
+    if (!list) return;
+
+    list.innerHTML = `
+        <div class="favorite-empty-state">
+            <i class="fa-light fa-heart"></i>
+            <strong>Bạn chưa có món yêu thích nào</strong>
+            <span>Hãy bấm trái tim ở trang thực đơn để lưu lại những món bạn thích nhất.</span>
+        </div>
+    `;
+}
+
+function renderFavoritesError(message) {
+    const list = document.getElementById('favoriteProductsList');
+    if (!list) return;
+
+    list.innerHTML = `
+        <div class="favorite-empty-state">
+            <i class="fa-light fa-circle-exclamation"></i>
+            <strong>Chưa thể tải món yêu thích</strong>
+            <span>${escapeHtml(message)}</span>
+        </div>
+    `;
+}
+
+function bindFavoriteImageFallbacks() {
+    document.querySelectorAll('#favoriteProductsList img').forEach((image) => {
+        image.addEventListener('error', () => {
+            image.src = DEFAULT_PRODUCT_IMAGE;
+        });
+    });
+}
+
+function renderFavoriteProducts(products = []) {
+    const list = document.getElementById('favoriteProductsList');
+    if (!list) return;
+
+    if (!products.length) {
+        renderFavoritesEmpty();
+        return;
+    }
+
+    list.innerHTML = `
+        <div class="favorite-products-grid">
+            ${products.map((product) => {
+                const productId = Number(product.id || 0);
+                const detailUrl = getProductDetailUrl(productId);
+
+                return `
+                    <article class="favorite-product-card">
+                        <a class="favorite-product-image" href="${escapeHtml(detailUrl)}" aria-label="Xem chi tiết ${escapeHtml(product.title || 'Món ăn')}">
+                            <img src="${escapeHtml(getProductImageUrl(product))}" alt="${escapeHtml(product.title || 'Món ăn')}">
+                        </a>
+                        <div class="favorite-product-body">
+                            <div>
+                                <h3>${escapeHtml(product.title || 'Món ăn')}</h3>
+                                ${product.description ? `<p>${escapeHtml(product.description)}</p>` : ''}
+                            </div>
+                            <strong class="favorite-product-price">${currencyFormatter.format(Number(product.price || 0))}</strong>
+                            <div class="favorite-product-actions">
+                                <a class="profile-btn light favorite-detail-link" href="${escapeHtml(detailUrl)}">
+                                    <i class="fa-light fa-eye"></i>
+                                    Xem chi tiết
+                                </a>
+                                <button class="profile-btn primary favorite-remove-btn" type="button" data-remove-favorite="${productId}">
+                                    <i class="fa-light fa-heart-crack"></i>
+                                    Bỏ yêu thích
+                                </button>
+                            </div>
+                        </div>
+                    </article>
+                `;
+            }).join('')}
+        </div>
+    `;
+
+    bindFavoriteImageFallbacks();
+}
+
+async function loadFavorites() {
+    if (!isLoggedIn()) {
+        redirectToLogin();
+        return;
+    }
+
+    setFavoritesLoading();
+
+    try {
+        const result = await apiFetch(`${PROFILE_FAVORITES_API}&action=list`);
+        const favorites = Array.isArray(result.data) ? result.data : [];
+
+        profileState.favorites.items = favorites;
+        profileState.favorites.loaded = true;
+        renderFavoriteProducts(favorites);
+        updateFavoriteCount(favorites.length);
+    } catch (error) {
+        if (isAuthError(error)) {
+            redirectToLogin();
+            return;
+        }
+
+        renderFavoritesError(getErrorMessage(error, 'Không thể tải danh sách món yêu thích.'));
+        setMessage(getErrorMessage(error, 'Không thể tải danh sách món yêu thích.'), 'error');
+    }
+}
+
+async function removeFavoriteProduct(productId, button) {
+    if (!isLoggedIn()) {
+        redirectToLogin();
+        return;
+    }
+
+    const normalizedProductId = Number(productId || 0);
+    if (!normalizedProductId) return;
+
+    const originalHtml = button?.innerHTML || '';
+    if (button) {
+        button.disabled = true;
+        button.innerHTML = '<i class="fa-light fa-spinner fa-spin"></i> Đang bỏ...';
+    }
+
+    try {
+        const statusResult = await apiFetch(`${PROFILE_FAVORITES_API}&action=status&product_id=${encodeURIComponent(normalizedProductId)}`);
+        if (!statusResult.data?.is_favorite) {
+            profileState.favorites.items = profileState.favorites.items.filter(
+                (product) => Number(product.id) !== normalizedProductId
+            );
+            renderFavoriteProducts(profileState.favorites.items);
+            updateFavoriteCount(profileState.favorites.items.length);
+            setMessage('Món này đã được bỏ khỏi danh sách yêu thích.', 'success');
+            return;
+        }
+
+        const result = await apiFetch(`${PROFILE_FAVORITES_API}&action=toggle`, {
+            method: 'POST',
+            body: JSON.stringify({ product_id: normalizedProductId })
+        });
+        const isFavorite = Boolean(result.data?.is_favorite);
+
+        if (isFavorite) {
+            await loadFavorites();
+            setMessage('Món này vẫn đang trong danh sách yêu thích.', 'error');
+            return;
+        }
+
+        profileState.favorites.items = profileState.favorites.items.filter(
+            (product) => Number(product.id) !== normalizedProductId
+        );
+        renderFavoriteProducts(profileState.favorites.items);
+        updateFavoriteCount(profileState.favorites.items.length);
+        setMessage('Đã bỏ món khỏi danh sách yêu thích.', 'success');
+    } catch (error) {
+        if (isAuthError(error)) {
+            redirectToLogin();
+            return;
+        }
+
+        setMessage(getErrorMessage(error, 'Không thể cập nhật món yêu thích.'), 'error');
+    } finally {
+        if (button && button.isConnected) {
+            button.disabled = false;
+            button.innerHTML = originalHtml;
+        }
+    }
+}
+
+function setupFavoriteEvents() {
+    const section = document.getElementById('favoriteSection');
+    if (!section) return;
+
+    section.addEventListener('click', (event) => {
+        const removeButton = event.target.closest('[data-remove-favorite]');
+        if (!removeButton || removeButton.disabled) return;
+
+        removeFavoriteProduct(Number(removeButton.dataset.removeFavorite), removeButton);
+    });
 }
 
 function setCouponMessage(message = '', type = '') {
@@ -745,7 +957,15 @@ function setupProfileEvents() {
         }
     });
     document.getElementById('favoriteBtn').addEventListener('click', () => {
-        setMessage('Mục món yêu thích sẽ hiển thị dữ liệu khi bảng favorite_products được thêm.');
+        const section = document.getElementById('favoriteSection');
+        if (section) {
+            section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        if (!profileState.favorites.loaded) {
+            loadFavorites();
+        }
+
     });
     document.getElementById('focusAddressBtn').addEventListener('click', () => {
         document.getElementById('address').focus();
@@ -756,6 +976,7 @@ function setupProfileEvents() {
     document.getElementById('sidebarAvatar').addEventListener('click', openAvatarPicker);
     document.getElementById('sidebarAvatar').addEventListener('keydown', handleAvatarPickerKeydown);
     document.getElementById('avatarFile').addEventListener('change', handleAvatarSelected);
+    setupFavoriteEvents();
     setupCouponEvents();
 }
 
@@ -763,5 +984,6 @@ document.addEventListener('DOMContentLoaded', () => {
     updateCartCount();
     setupProfileEvents();
     loadProfile();
+    loadFavorites();
     loadCoupons();
 });

@@ -215,14 +215,37 @@ function changePage(newPage) {
     }
 }
 
+function getRequestedProductId() {
+    const params = new URLSearchParams(window.location.search);
+    return Number(params.get('product_id') || 0);
+}
+
+function openRequestedProductDetail(productId) {
+    const normalizedProductId = Number(productId || 0);
+    if (!normalizedProductId) {
+        changePage(currentPage);
+        return;
+    }
+
+    const productIndex = productsData.findIndex((product) => Number(product.id) === normalizedProductId);
+    if (productIndex < 0) {
+        changePage(currentPage);
+        return;
+    }
+
+    currentPage = Math.floor(productIndex / PRODUCTS_PER_PAGE) + 1;
+    changePage(currentPage);
+    window.setTimeout(() => detailProduct(normalizedProductId), 0);
+}
+
 
 document.addEventListener('DOMContentLoaded', async function () {
     initHeroSlider();
 
-    // �🔌 Load products from API
+    // 🔌 Load products from API
     try {
         productsData = await apiCall('product', 'list', { limit: 100 }, 'GET');
-        changePage(currentPage);
+        openRequestedProductDetail(getRequestedProductId());
     } catch (error) {
         console.error('Lỗi tải sản phẩm:', error);
         renderProducts([]);
@@ -305,7 +328,8 @@ async function toggleFavorite(productId) {
 // Hàm hiển thị chi tiết sản phẩm
 function detailProduct(productId) {
     // 1. Tìm sản phẩm theo ID
-    const product = productsData.find(p => p.id === productId);
+    const normalizedProductId = Number(productId || 0);
+    const product = productsData.find(p => Number(p.id) === normalizedProductId);
 
     if (product) {
         // 2. Định dạng giá tiền

@@ -4,25 +4,10 @@
  * Routes: /api/index.php?controller=NAME&action=METHOD
  */
 
-// ===== PHP ERROR OUTPUT (JSON SAFE) =====
-ini_set('display_errors', '0');
-ini_set('log_errors', '1');
-error_reporting(E_ALL);
-
-// ===== CORS SETUP =====
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization');
-
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit;
-}
-
-header('Content-Type: application/json; charset=utf-8');
-
 // ===== LOAD CONFIGURATION =====
 require_once __DIR__ . '/config/config.php';
+header('Content-Type: application/json; charset=utf-8');
+
 require_once __DIR__ . '/config/database.php';
 require_once __DIR__ . '/utils/Helper.php';
 require_once __DIR__ . '/utils/Response.php';
