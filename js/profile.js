@@ -510,6 +510,7 @@ function renderMyCoupons(coupons = []) {
 }
 
 function exchangeButtonLabel(coupon = {}) {
+    if (coupon.redeem_status === 'sold_out') return 'Hết lượt';
     if (coupon.redeem_status === 'not_enough_points') return 'Không đủ điểm';
     if (coupon.redeem_status === 'limit_reached') return 'Đã đổi';
     return 'Đổi mã';
@@ -546,6 +547,7 @@ function renderExchangeCoupons(coupons = []) {
                             <div class="exchange-meta">
                                 <span>Cần ${formatNumber(coupon.points_required)} điểm</span>
                                 <span>${escapeHtml(formatCouponCondition(coupon))}</span>
+                                ${coupon.usage_limit ? `<span>Đã đổi ${formatNumber(coupon.redeemed_count || 0)}/${formatNumber(coupon.usage_limit)} lượt</span>` : ''}
                                 <span>Hạn đổi: ${escapeHtml(formatCouponDate(coupon.end_date))}</span>
                             </div>
                         </div>

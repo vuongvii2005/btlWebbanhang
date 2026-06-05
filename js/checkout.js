@@ -1,5 +1,6 @@
 const CHECKOUT_ORDER_API = 'api/checkout/create-order.php';
 const CHECKOUT_COUPON_API = 'api/coupons/apply.php';
+const CHECKOUT_USER_COUPONS_API = 'api/user/coupons.php';
 const CHECKOUT_PROFILE_API = `${window.APP_API_URL}?controller=auth&action=profile`;
 const CHECKOUT_DEFAULT_AVATAR = 'assets/img/avt_mac_dinh.jpg';
 const CHECKOUT_FALLBACK_IMAGE = 'assets/img/vy-food.png';
@@ -19,6 +20,7 @@ const checkoutState = {
     paymentMethod: 'cod',
     deliveryAddressDraft: null,
     appliedCoupon: null,
+    userCoupons: [],
     totals: {
         subtotal: 0,
         base_shipping_fee: CHECKOUT_SHIPPING_FEE,
@@ -199,6 +201,37 @@ function hydratePendingCoupon() {
         applyCoupon();
     } else {
         setMessage('couponMessage', 'Mã giảm giá đã được điền. Hãy thêm món để áp dụng.', 'info');
+    }
+}
+
+function renderCheckoutCouponSelect() {
+    const select = document.getElementById('checkoutCouponSelect');
+    if (!select) return;
+
+    const usableCoupons = checkoutState.userCoupons.filter((coupon) => Boolean(coupon.can_use));
+
+    if (!usableCoupons.length) {
+        select.hidden = true;
+        select.innerHTML = '<option value="">Chọn mã của tôi</option>';
+        return;
+    }
+
+    select.hidden = false;
+    select.innerHTML = '<option value="">Chọn mã của tôi</option>' + usableCoupons.map((coupon) => {
+        const code = coupon.coupon_code || coupon.code || '';
+        const title = coupon.title || code;
+        return `<option value="${escapeHtml(code)}">${escapeHtml(code)} - ${escapeHtml(title)}</option>`;
+    }).join('');
+}
+
+async function loadCheckoutCoupons() {
+    try {
+        const data = await requestData(CHECKOUT_USER_COUPONS_API);
+        checkoutState.userCoupons = data.user_coupons || [];
+        renderCheckoutCouponSelect();
+    } catch (error) {
+        checkoutState.userCoupons = [];
+        renderCheckoutCouponSelect();
     }
 }
 
@@ -579,6 +612,8 @@ function setupControls() {
 
     document.getElementById('applyCouponBtn').addEventListener('click', () => applyCoupon());
     document.getElementById('couponCode').addEventListener('input', () => {
+        const select = document.getElementById('checkoutCouponSelect');
+        if (select) select.value = '';
         if (checkoutState.appliedCoupon) {
             resetCoupon('Mã giảm giá đã thay đổi. Vui lòng áp dụng lại.');
         }
@@ -588,6 +623,11 @@ function setupControls() {
             event.preventDefault();
             applyCoupon();
         }
+    });
+    document.getElementById('checkoutCouponSelect')?.addEventListener('change', (event) => {
+        const code = event.target.value || '';
+        document.getElementById('couponCode').value = code;
+        resetCoupon(code ? 'Đã chọn mã. Bấm áp dụng để kiểm tra điều kiện.' : '');
     });
     document.getElementById('placeOrderBtn').addEventListener('click', placeOrder);
 
@@ -652,5 +692,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     checkoutState.cart = getCartForUser(user.id);
     saveCartForUser();
     renderCheckoutState();
+    await loadCheckoutCoupons();
     hydratePendingCoupon();
 });

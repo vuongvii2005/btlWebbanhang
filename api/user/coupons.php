@@ -32,6 +32,27 @@ function couponStatusLabel($coupon) {
     return ['active', 'Chưa dùng'];
 }
 
+function userCouponHasCouponColumn(PDO $pdo, $column) {
+    static $cache = [];
+    $column = (string)$column;
+
+    if (array_key_exists($column, $cache)) {
+        return $cache[$column];
+    }
+
+    $stmt = $pdo->prepare(
+        "SELECT COUNT(*)
+         FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE()
+           AND TABLE_NAME = 'coupons'
+           AND COLUMN_NAME = ?"
+    );
+    $stmt->execute([$column]);
+    $cache[$column] = (int)$stmt->fetchColumn() > 0;
+
+    return $cache[$column];
+}
+
 try {
     if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
         Response::error('Method not allowed', 405);
@@ -90,6 +111,11 @@ try {
     }
     unset($coupon);
 
+    $hasRedeemedCount = userCouponHasCouponColumn($pdo, 'redeemed_count');
+    $redeemedCountExpr = $hasRedeemedCount
+        ? 'c.redeemed_count'
+        : "(SELECT COUNT(*) FROM user_coupons uc2 WHERE uc2.coupon_id = c.id AND uc2.source = 'points_exchange')";
+
     $availableStmt = $pdo->prepare(
         "SELECT
             c.id,
@@ -102,6 +128,8 @@ try {
             c.max_discount_amount,
             c.points_required,
             c.per_user_limit,
+            c.usage_limit,
+            $redeemedCountExpr AS redeemed_count,
             c.end_date,
             (
                 SELECT COUNT(*)
@@ -125,12 +153,24 @@ try {
         $coupon['max_discount_amount'] = $coupon['max_discount_amount'] !== null ? (float)$coupon['max_discount_amount'] : null;
         $coupon['points_required'] = (int)$coupon['points_required'];
         $coupon['per_user_limit'] = (int)$coupon['per_user_limit'];
+        $coupon['usage_limit'] = $coupon['usage_limit'] !== null ? (int)$coupon['usage_limit'] : null;
+        $coupon['redeemed_count'] = (int)($coupon['redeemed_count'] ?? 0);
         $coupon['user_redeemed_count'] = (int)$coupon['user_redeemed_count'];
+        $coupon['global_limit_reached'] = $coupon['usage_limit'] !== null
+            && $coupon['redeemed_count'] >= $coupon['usage_limit'];
         $coupon['can_redeem'] = $currentPoints >= $coupon['points_required']
-            && $coupon['user_redeemed_count'] < $coupon['per_user_limit'];
-        $coupon['redeem_status'] = $coupon['can_redeem']
-            ? 'available'
-            : ($currentPoints < $coupon['points_required'] ? 'not_enough_points' : 'limit_reached');
+            && $coupon['user_redeemed_count'] < $coupon['per_user_limit']
+            && !$coupon['global_limit_reached'];
+
+        if ($coupon['can_redeem']) {
+            $coupon['redeem_status'] = 'available';
+        } elseif ($coupon['global_limit_reached']) {
+            $coupon['redeem_status'] = 'sold_out';
+        } elseif ($currentPoints < $coupon['points_required']) {
+            $coupon['redeem_status'] = 'not_enough_points';
+        } else {
+            $coupon['redeem_status'] = 'limit_reached';
+        }
     }
     unset($coupon);
 

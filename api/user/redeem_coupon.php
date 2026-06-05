@@ -31,6 +31,27 @@ function redeemGenerateUserCouponCode(PDO $pdo, $baseCode, $userId) {
     throw new Exception('Không thể tạo mã giảm giá riêng, vui lòng thử lại.');
 }
 
+function redeemCouponHasColumn(PDO $pdo, $column) {
+    static $cache = [];
+    $column = (string)$column;
+
+    if (array_key_exists($column, $cache)) {
+        return $cache[$column];
+    }
+
+    $stmt = $pdo->prepare(
+        "SELECT COUNT(*)
+         FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE()
+           AND TABLE_NAME = 'coupons'
+           AND COLUMN_NAME = ?"
+    );
+    $stmt->execute([$column]);
+    $cache[$column] = (int)$stmt->fetchColumn() > 0;
+
+    return $cache[$column];
+}
+
 try {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         Response::error('Method not allowed', 405);
@@ -48,8 +69,14 @@ try {
 
     $pdo->beginTransaction();
 
+    $hasRedeemedCount = redeemCouponHasColumn($pdo, 'redeemed_count');
+    $redeemedCountExpr = $hasRedeemedCount
+        ? 'redeemed_count'
+        : "(SELECT COUNT(*) FROM user_coupons uc WHERE uc.coupon_id = coupons.id AND uc.source = 'points_exchange')";
+
     $couponStmt = $pdo->prepare(
         "SELECT *,
+            $redeemedCountExpr AS redeemed_count,
             (start_date IS NULL OR start_date <= NOW()) AS coupon_has_started,
             (end_date IS NULL OR end_date >= NOW()) AS coupon_not_ended
          FROM coupons
@@ -78,6 +105,10 @@ try {
 
     if (isset($coupon['coupon_not_ended']) && (int)$coupon['coupon_not_ended'] !== 1) {
         throw new Exception('Mã ưu đãi đã hết hạn.');
+    }
+
+    if ($coupon['usage_limit'] !== null && (int)$coupon['redeemed_count'] >= (int)$coupon['usage_limit']) {
+        throw new Exception('Mã ưu đãi đã hết lượt đổi.');
     }
 
     $limitStmt = $pdo->prepare(
@@ -136,6 +167,15 @@ try {
         $couponCode,
         $expiredAt
     ]);
+
+    if ($hasRedeemedCount) {
+        $redeemedCountStmt = $pdo->prepare(
+            "UPDATE coupons
+             SET redeemed_count = redeemed_count + 1, updated_at = NOW()
+             WHERE id = ?"
+        );
+        $redeemedCountStmt->execute([(int)$couponId]);
+    }
 
     $transactionStmt = $pdo->prepare(
         "INSERT INTO point_transactions

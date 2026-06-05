@@ -510,6 +510,24 @@
     padding: 0 12px 0 38px;
 }
 
+.checkout-coupon-select {
+    width: 100%;
+    min-height: 40px;
+    margin-top: 8px;
+    border: 1px solid #d9dce3;
+    border-radius: 6px;
+    padding: 0 12px;
+    background: #fff;
+    color: var(--checkout-text);
+    font: inherit;
+}
+
+.checkout-coupon-select:focus {
+    border-color: var(--checkout-red);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(181, 41, 47, 0.1);
+}
+
 .coupon-apply-btn,
 .place-order-btn,
 .checkout-secondary-link {

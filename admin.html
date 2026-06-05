@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bảng điều khiển quản trị - Vy Food</title>
     <link rel="stylesheet" href="./assets/font/font-awesome-pro-v6-6.2.0/css/all.min.css">
-    <link rel="stylesheet" href="assets/css/dashboard.css">
+    <link rel="stylesheet" href="assets/css/dashboard.css?v=20260606-coupons">
 </head>
 <body>
     <div class="dashboard-shell">
@@ -20,6 +20,7 @@
                 <button class="nav-link" data-section="categories-section"><i class="fa-solid fa-layer-group"></i> Danh mục</button>
                 <button class="nav-link" data-section="orders-section"><i class="fa-solid fa-receipt"></i> Đơn hàng</button>
                 <button class="nav-link" data-section="customers-section"><i class="fa-solid fa-users"></i> Khách hàng</button>
+                <button class="nav-link" data-section="coupons-section"><i class="fa-solid fa-ticket"></i> Khuyến mãi</button>
             </nav>
             <button id="logoutBtn" class="logout-btn"><i class="fa-solid fa-right-from-bracket"></i> Đăng xuất</button>
         </aside>
@@ -141,10 +142,68 @@
                     </div>
                 </div>
             </section>
+            <section id="coupons-section" class="content-section">
+                <div class="panel">
+                    <div class="panel-header"><h2>Danh sách khuyến mãi</h2></div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr><th>Mã</th><th>Ưu đãi</th><th>Điểm đổi</th><th>Điều kiện</th><th>Lượt dùng</th><th>Hạn</th><th>Trạng thái</th><th>Đã tặng</th><th>Hành động</th></tr>
+                            </thead>
+                            <tbody id="couponsTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header"><h2>Tạo mã giảm giá</h2></div>
+                    <form id="couponForm" class="admin-form coupon-form">
+                        <input type="hidden" id="couponId">
+                        <input type="text" id="couponCode" placeholder="Mã giảm giá" required>
+                        <input type="text" id="couponTitle" placeholder="Tiêu đề" required>
+                        <select id="couponDiscountType">
+                            <option value="fixed">Giảm tiền</option>
+                            <option value="percent">Giảm phần trăm</option>
+                            <option value="freeship">Miễn phí giao hàng</option>
+                        </select>
+                        <input type="number" id="couponDiscountValue" placeholder="Giá trị giảm" min="0" step="1000">
+                        <input type="number" id="couponMinOrder" placeholder="Đơn tối thiểu" min="0" step="1000">
+                        <input type="number" id="couponMaxDiscount" placeholder="Giảm tối đa" min="0" step="1000">
+                        <input type="number" id="couponPointsRequired" placeholder="Điểm cần đổi" min="0" value="0">
+                        <input type="number" id="couponUsageLimit" placeholder="Lượt dùng" min="1">
+                        <input type="number" id="couponPerUserLimit" placeholder="Giới hạn mỗi khách" min="1" value="1">
+                        <select id="couponStatus">
+                            <option value="1">Đang bật</option>
+                            <option value="0">Tạm tắt</option>
+                        </select>
+                        <input type="datetime-local" id="couponStartDate">
+                        <input type="datetime-local" id="couponEndDate">
+                        <textarea id="couponDescription" placeholder="Mô tả"></textarea>
+                        <div class="form-actions">
+                            <button type="submit" id="couponSubmitBtn" class="primary-btn">Tạo mã</button>
+                            <button type="button" id="resetCouponBtn" class="secondary-btn">Làm mới</button>
+                        </div>
+                    </form>
+                    <p id="couponMessage" class="admin-message"></p>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header"><h2>Tặng mã giảm giá</h2></div>
+                    <form id="giftCouponForm" class="admin-form compact-form">
+                        <select id="giftCouponId" required></select>
+                        <select id="giftUserId" required></select>
+                        <input type="datetime-local" id="giftExpiredAt">
+                        <div class="form-actions">
+                            <button type="submit" class="primary-btn">Tặng mã</button>
+                        </div>
+                    </form>
+                    <p id="giftCouponMessage" class="admin-message"></p>
+                </div>
+            </section>
         </main>
     </div>
 
     <script src="js/app-utils.js"></script>
-    <script src="js/dashboard-admin.js"></script>
+    <script src="js/dashboard-admin.js?v=20260606-coupons"></script>
 </body>
 </html>

@@ -244,10 +244,6 @@ function checkoutCalculateCouponDiscount($coupon, $subtotal, $baseShippingFee) {
         throw new Exception('Mã giảm giá đã hết hạn.');
     }
 
-    if ($coupon['usage_limit'] !== null && (int)$coupon['used_count'] >= (int)$coupon['usage_limit']) {
-        throw new Exception('Mã giảm giá đã hết lượt sử dụng.');
-    }
-
     if ($subtotal < $minOrderAmount) {
         throw new Exception('Đơn hàng cần tối thiểu ' . checkoutFormatCurrency($minOrderAmount) . ' để dùng mã này.');
     }
