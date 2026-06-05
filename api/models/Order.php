@@ -3,12 +3,90 @@
  * ORDER MODEL - Quản lý đơn hàng
  */
 
+if (!class_exists('OrderStockException')) {
+    class OrderStockException extends Exception {}
+}
+
 class Order {
     
     private $pdo;
     
     public function __construct($pdo) {
         $this->pdo = $pdo;
+    }
+
+    private function normalizeStockRequirements(array $items) {
+        $requirements = [];
+
+        foreach ($items as $item) {
+            if (!isset($item['id']) || !isset($item['quantity']) || !isset($item['price'])) {
+                throw new Exception('Invalid item structure');
+            }
+
+            $productId = (int)$item['id'];
+            $quantity = (int)$item['quantity'];
+
+            if ($productId < 1 || $quantity < 1) {
+                throw new Exception('Invalid item structure');
+            }
+
+            if (!isset($requirements[$productId])) {
+                $requirements[$productId] = [
+                    'product_id' => $productId,
+                    'quantity' => 0
+                ];
+            }
+
+            $requirements[$productId]['quantity'] += $quantity;
+        }
+
+        ksort($requirements);
+        return $requirements;
+    }
+
+    private function lockAndValidateStock(array $requirements) {
+        $productStmt = $this->pdo->prepare(
+            "SELECT id, title, stock, status FROM products WHERE id = ? FOR UPDATE"
+        );
+
+        foreach ($requirements as $requirement) {
+            $productStmt->execute([$requirement['product_id']]);
+            $product = $productStmt->fetch();
+
+            if (!$product || (int)$product['status'] !== 1) {
+                throw new OrderStockException('Sản phẩm #' . $requirement['product_id'] . ' không còn khả dụng.');
+            }
+
+            $stock = (int)($product['stock'] ?? 0);
+            $quantity = (int)$requirement['quantity'];
+
+            if ($stock <= 0) {
+                throw new OrderStockException('Sản phẩm "' . $product['title'] . '" đã hết hàng.');
+            }
+
+            if ($quantity > $stock) {
+                throw new OrderStockException('Sản phẩm "' . $product['title'] . '" chỉ còn ' . $stock . ' phần, bạn đang đặt ' . $quantity . ' phần.');
+            }
+        }
+    }
+
+    private function deductStock(array $requirements) {
+        $stockStmt = $this->pdo->prepare(
+            "UPDATE products
+             SET stock = stock - ?, updated_at = NOW()
+             WHERE id = ? AND status = 1 AND stock >= ?"
+        );
+
+        foreach ($requirements as $requirement) {
+            $quantity = (int)$requirement['quantity'];
+            $productId = (int)$requirement['product_id'];
+
+            $stockStmt->execute([$quantity, $productId, $quantity]);
+
+            if ($stockStmt->rowCount() !== 1) {
+                throw new OrderStockException('Sản phẩm #' . $productId . ' không còn đủ tồn kho để đặt hàng.');
+            }
+        }
     }
     
     /**
@@ -42,6 +120,8 @@ class Order {
         try {
             // Start transaction
             $this->pdo->beginTransaction();
+            $stockRequirements = $this->normalizeStockRequirements($data['items']);
+            $this->lockAndValidateStock($stockRequirements);
             
             // Create order
             $stmt = $this->pdo->prepare(
@@ -85,6 +165,8 @@ class Order {
                     $item['note'] ?? null
                 ]);
             }
+
+            $this->deductStock($stockRequirements);
             
             // Commit transaction
             $this->pdo->commit();
@@ -96,9 +178,14 @@ class Order {
             ];
             
         } catch (Exception $e) {
-            $this->pdo->rollBack();
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
             logError('Order creation failed', ['error' => $e->getMessage()]);
-            return ['success' => false, 'message' => 'Failed to create order'];
+            return [
+                'success' => false,
+                'message' => $e instanceof OrderStockException ? $e->getMessage() : 'Failed to create order'
+            ];
         }
     }
     

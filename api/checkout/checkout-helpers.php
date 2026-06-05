@@ -2,6 +2,10 @@
 
 require_once __DIR__ . '/../user/welcome-coupon-helper.php';
 
+if (!class_exists('CheckoutClientException')) {
+    class CheckoutClientException extends Exception {}
+}
+
 function checkoutRequireAuthenticatedUser() {
     if (hasBearerToken()) {
         $tokenUser = getAuthUser();
@@ -77,9 +81,15 @@ function checkoutNormalizeCartItems($items) {
     return array_values($cartItems);
 }
 
-function checkoutBuildOrderItems(PDO $pdo, array $cartItems) {
+function checkoutBuildOrderItems(PDO $pdo, array $cartItems, $lockProducts = false, $validateStock = false) {
+    if ($lockProducts) {
+        usort($cartItems, function ($a, $b) {
+            return (int)$a['product_id'] <=> (int)$b['product_id'];
+        });
+    }
+
     $productStmt = $pdo->prepare(
-        "SELECT id, title, price, image_url FROM products WHERE id = ? AND status = 1"
+        "SELECT id, title, price, image_url, stock, status FROM products WHERE id = ?" . ($lockProducts ? " FOR UPDATE" : "")
     );
 
     $orderItems = [];
@@ -89,12 +99,24 @@ function checkoutBuildOrderItems(PDO $pdo, array $cartItems) {
         $productStmt->execute([$cartItem['product_id']]);
         $product = $productStmt->fetch();
 
-        if (!$product) {
-            throw new Exception('Product not found or unavailable: ' . $cartItem['product_id']);
+        if (!$product || (int)$product['status'] !== 1) {
+            throw new CheckoutClientException('Sản phẩm #' . $cartItem['product_id'] . ' không còn khả dụng.');
         }
 
         $price = (float)$product['price'];
         $quantity = (int)$cartItem['quantity'];
+        $stock = (int)($product['stock'] ?? 0);
+
+        if ($validateStock) {
+            if ($stock <= 0) {
+                throw new CheckoutClientException('Sản phẩm "' . $product['title'] . '" đã hết hàng.');
+            }
+
+            if ($quantity > $stock) {
+                throw new CheckoutClientException('Sản phẩm "' . $product['title'] . '" chỉ còn ' . $stock . ' phần, bạn đang đặt ' . $quantity . ' phần.');
+            }
+        }
+
         $lineTotal = $price * $quantity;
         $subtotal += $lineTotal;
 
@@ -102,6 +124,7 @@ function checkoutBuildOrderItems(PDO $pdo, array $cartItems) {
             'product_id' => (int)$product['id'],
             'title' => $product['title'],
             'image_url' => $product['image_url'],
+            'stock' => $stock,
             'quantity' => $quantity,
             'price' => $price,
             'line_total' => $lineTotal,
@@ -274,9 +297,9 @@ function checkoutCalculateCouponDiscount($coupon, $subtotal, $baseShippingFee) {
     ];
 }
 
-function checkoutCalculateTotals(PDO $pdo, $userId, array $items, $deliveryType, $couponCode = '', $lockCoupon = false) {
+function checkoutCalculateTotals(PDO $pdo, $userId, array $items, $deliveryType, $couponCode = '', $lockCoupon = false, $lockProducts = false, $validateStock = false) {
     $cartItems = checkoutNormalizeCartItems($items);
-    $products = checkoutBuildOrderItems($pdo, $cartItems);
+    $products = checkoutBuildOrderItems($pdo, $cartItems, $lockProducts, $validateStock);
     $subtotal = (float)$products['subtotal'];
     $baseShippingFee = checkoutBaseShippingFee($deliveryType);
     $couponCode = trim((string)$couponCode);

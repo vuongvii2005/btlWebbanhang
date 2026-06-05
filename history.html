@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="assets/css/main.css">
     <link rel="stylesheet" href="assets/css/footer.css">
     <link rel="stylesheet" href="assets/font/font-awesome-pro-v6-6.2.0/css/all.min.css">
-    <link rel="stylesheet" href="assets/css/history.css?v=address-case-20260528">
+    <link rel="stylesheet" href="assets/css/history.css?v=review-state-actions-20260605">
 </head>
 <body>
 
@@ -17,13 +17,14 @@
             <div>
                 <a href="index.html" class="back-link"><i class="fa-solid fa-arrow-left"></i> Quay lại mua hàng</a>
                 <h1>Lịch sử mua hàng</h1>
-                <p>Theo dõi trạng thái đơn, xem chi tiết món đã đặt và hủy đơn khi còn chờ xác nhận.</p>
+                <p>Theo dõi trạng thái đơn, xem chi tiết món đã đặt và đánh giá sản phẩm sau khi hoàn thành.</p>
             </div>
         </section>
 
         <div class="history-tabs" role="tablist" aria-label="Lọc đơn hàng">
             <button class="history-tab active" data-filter="all" type="button">Tất cả</button>
             <button class="history-tab" data-filter="pending" type="button">Chờ xác nhận</button>
+            <button class="history-tab" data-filter="shipping" type="button">Đang giao</button>
             <button class="history-tab" data-filter="completed" type="button">Hoàn thành</button>
             <button class="history-tab" data-filter="cancelled" type="button">Đã hủy</button>
         </div>
@@ -39,7 +40,14 @@
         </div>
     </div>
 
+    <div id="orderReviewModal" class="history-modal">
+        <div class="history-modal-content review-modal-content">
+            <button id="closeOrderReview" class="modal-close" type="button">&times;</button>
+            <div id="orderReviewBody"></div>
+        </div>
+    </div>
+
     <script src="js/app-utils.js"></script>
-    <script src="js/history.js?v=address-case-20260528"></script>
+    <script src="js/history.js?v=review-state-actions-20260605"></script>
 </body>
 </html>

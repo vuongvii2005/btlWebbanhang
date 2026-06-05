@@ -1,6 +1,7 @@
 // 🔌 API Configuration
 const API_URL = 'http://localhost/btlWebbanhang/api/index.php';
 const FAVORITE_API_URL = `${window.APP_API_URL || API_URL}?controller=favorite`;
+const REVIEW_API_URL = `${window.APP_API_URL || API_URL}?controller=review`;
 
 // 📡 API Helper Function
 async function apiCall(controller, action, data = null, method = 'GET', token = null) {
@@ -325,6 +326,67 @@ async function toggleFavorite(productId) {
     }
 }
 
+function renderReviewStars(rating = 0) {
+    const normalizedRating = Number(rating || 0);
+    let html = '';
+
+    for (let i = 1; i <= 5; i++) {
+        const diff = normalizedRating - i;
+        const iconClass = normalizedRating >= i
+            ? 'fa-solid fa-star'
+            : diff >= -0.5
+                ? 'fa-solid fa-star-half-stroke'
+                : 'fa-light fa-star';
+
+        html += `<i class="${iconClass}"></i>`;
+    }
+
+    return html;
+}
+
+function renderModalReviewSummary(productId, payload = {}) {
+    const section = document.getElementById('productReviewsSection');
+    if (!section) return;
+
+    const summary = payload.summary || {};
+    const averageRating = Number(summary.average_rating || 0);
+    const totalReviews = Number(summary.total_reviews || 0);
+
+    section.innerHTML = `
+        <div class="modal-review-score">
+            <span class="review-stars modal-stars">${renderReviewStars(averageRating)}</span>
+            <strong>${averageRating ? averageRating.toFixed(1) : '0.0'}/5</strong>
+            <span>${totalReviews > 0 ? `${totalReviews} lượt đánh giá` : 'Chưa có đánh giá'}</span>
+        </div>
+        <button class="modal-review-link" type="button" onclick="goToReviewsPage(${Number(productId)})">
+            Xem đánh giá
+        </button>
+    `;
+}
+
+function goToReviewsPage(productId) {
+    window.location.href = `reviews.html?product_id=${encodeURIComponent(productId)}`;
+}
+
+async function loadProductReviews(productId) {
+    const section = document.getElementById('productReviewsSection');
+    if (!section) return;
+
+    section.innerHTML = '<div class="reviews-loading">Đang tải đánh giá...</div>';
+
+    try {
+        const reviewResult = await apiFetch(`${REVIEW_API_URL}&action=stats&product_id=${encodeURIComponent(productId)}`);
+        renderModalReviewSummary(productId, reviewResult.data || {});
+    } catch (error) {
+        section.innerHTML = `
+            <div class="reviews-empty">
+                <i class="fa-light fa-circle-exclamation"></i>
+                <span>Chưa thể tải đánh giá</span>
+            </div>
+        `;
+    }
+}
+
 // Hàm hiển thị chi tiết sản phẩm
 function detailProduct(productId) {
     // 1. Tìm sản phẩm theo ID
@@ -364,6 +426,10 @@ function detailProduct(productId) {
                     <input type="text" id="noteInput" placeholder="Nhập thông tin cần lưu ý...">
                 </div>
 
+                <section id="productReviewsSection" class="modal-review-summary" aria-live="polite">
+                    <div class="reviews-loading">Đang tải đánh giá...</div>
+                </section>
+
                 <div class="modal-total">
                     <span class="label">Thành tiền</span>
                     <span id="modalTotalAmount" class="amount">${formattedPrice}</span>
@@ -383,6 +449,7 @@ function detailProduct(productId) {
 
         document.getElementById('quantityInput').dataset.price = product.price; // Lưu giá gốc
         loadFavoriteStatus(product.id);
+        loadProductReviews(product.id);
     } else {
         console.error("Không tìm thấy sản phẩm với ID: " + productId);
     }

@@ -102,6 +102,8 @@ try {
         $items,
         $deliveryType,
         $couponCode,
+        true,
+        true,
         true
     );
 
@@ -141,6 +143,11 @@ try {
         "INSERT INTO order_items (order_id, product_id, quantity, price, note)
          VALUES (?, ?, ?, ?, ?)"
     );
+    $stockStmt = $pdo->prepare(
+        "UPDATE products
+         SET stock = stock - ?, updated_at = NOW()
+         WHERE id = ? AND status = 1 AND stock >= ?"
+    );
 
     foreach ($totals['items'] as $item) {
         $itemStmt->execute([
@@ -150,6 +157,16 @@ try {
             $item['price'],
             $item['note']
         ]);
+
+        $stockStmt->execute([
+            $item['quantity'],
+            $item['product_id'],
+            $item['quantity']
+        ]);
+
+        if ($stockStmt->rowCount() !== 1) {
+            throw new CheckoutClientException('Sản phẩm "' . $item['title'] . '" không còn đủ tồn kho để đặt hàng.');
+        }
     }
 
     if ($coupon) {
@@ -229,7 +246,7 @@ try {
     }
 
     logError('Checkout create order failed', ['error' => $e->getMessage()]);
-    Response::error(DEBUG_MODE ? $e->getMessage() : 'Không thể tạo đơn hàng', 400);
+    Response::error((DEBUG_MODE || $e instanceof CheckoutClientException) ? $e->getMessage() : 'Không thể tạo đơn hàng', 400);
 }
 
 ?>

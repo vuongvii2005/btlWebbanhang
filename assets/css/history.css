@@ -174,7 +174,9 @@ body {
 .orders-list {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 20px;
+    column-gap: 20px;
+    row-gap: 32px;
+    align-items: start;
 }
 
 .order-card {
@@ -183,7 +185,7 @@ body {
     border-radius: 18px;
     padding: 18px;
     box-shadow: 0 16px 36px rgba(16, 24, 40, 0.1);
-    min-height: 100%;
+    min-height: 0;
     display: flex;
     flex-direction: column;
     gap: 16px;
@@ -288,7 +290,8 @@ body {
     color: #155e75;
 }
 
-.status-completed {
+.status-completed,
+.status-delivered {
     background: #dff7e5;
     color: #247343;
 }
@@ -326,6 +329,173 @@ body {
 .history-btn.solid {
     background: var(--history-red);
     color: #fff;
+}
+
+.order-thanks {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    border: 1px solid #c8efd6;
+    border-radius: 10px;
+    padding: 12px 14px;
+    background: #effaf2;
+    color: #16773b;
+    font-size: 14px;
+    line-height: 1.35;
+}
+
+.order-thanks i {
+    flex: 0 0 auto;
+}
+
+.review-modal-content {
+    width: min(860px, 100%);
+}
+
+.review-modal-heading h2 {
+    margin: 0 0 6px;
+    font-size: 26px;
+}
+
+.review-modal-heading p {
+    margin: 0 0 18px;
+    color: var(--history-muted);
+}
+
+.review-modal-success {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-bottom: 14px;
+    border: 1px solid #c8efd6;
+    border-radius: 10px;
+    padding: 12px 14px;
+    background: #effaf2;
+    color: #16773b;
+    font-weight: 700;
+}
+
+.history-review-list {
+    display: grid;
+    gap: 14px;
+}
+
+.history-review-item {
+    display: grid;
+    grid-template-columns: 94px minmax(0, 1fr);
+    gap: 16px;
+    border: 1px solid var(--history-line);
+    border-radius: 14px;
+    padding: 14px;
+    background: #fff;
+}
+
+.history-review-item img {
+    width: 94px;
+    height: 94px;
+    border-radius: 12px;
+    object-fit: cover;
+}
+
+.history-review-main {
+    min-width: 0;
+    display: grid;
+    gap: 10px;
+}
+
+.history-review-item-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.history-review-item-head h3 {
+    margin: 0 0 4px;
+    font-size: 18px;
+}
+
+.history-review-item-head span {
+    color: var(--history-muted);
+}
+
+.review-done-badge {
+    height: 30px;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    border-radius: 999px;
+    padding: 0 11px;
+    background: #dff7e5;
+    color: #16773b !important;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.history-review-stars {
+    display: flex;
+    gap: 6px;
+}
+
+.history-review-star {
+    width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    border: 1px solid #f3d6a0;
+    border-radius: 8px;
+    background: #fff;
+    color: #f5a400;
+    cursor: pointer;
+}
+
+.history-review-star.active {
+    background: #fffbeb;
+}
+
+.history-review-comment {
+    width: 100%;
+    resize: vertical;
+    border: 1px solid #d8dbe1;
+    border-radius: 9px;
+    padding: 10px 12px;
+    font: 14px var(--app-font-family);
+    outline: none;
+}
+
+.history-review-comment:focus {
+    border-color: var(--history-red);
+    box-shadow: 0 0 0 3px rgba(179, 38, 45, 0.1);
+}
+
+.history-review-submit {
+    justify-self: start;
+    min-width: 150px;
+}
+
+.history-review-note,
+.history-review-message {
+    border-radius: 9px;
+    padding: 10px 12px;
+    font-size: 14px;
+}
+
+.history-review-note {
+    border: 1px dashed #d8dbe1;
+    color: var(--history-muted);
+}
+
+.history-review-message {
+    margin: 0;
+    border: 1px solid #f1b9bf;
+    background: #fff0f1;
+    color: #a61f2b;
+    font-weight: 700;
+}
+
+.history-review-message.success {
+    border-color: #c8efd6;
+    background: #effaf2;
+    color: #16773b;
 }
 
 .history-btn.danger:hover,
@@ -483,6 +653,10 @@ body {
         padding: 24px 14px 50px;
     }
 
+    .history-review-item {
+        grid-template-columns: 1fr;
+    }
+
     .history-hero h1 {
         font-size: 32px;
     }
@@ -502,5 +676,9 @@ body {
 
     .history-actions {
         grid-template-columns: 1fr;
+    }
+
+    .history-review-item-head {
+        flex-direction: column;
     }
 }
