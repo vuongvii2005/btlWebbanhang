@@ -48,6 +48,7 @@ async function apiCall(controller, action, data = null, method = 'GET', token = 
 
 // ✅ Global product data (loaded from API)
 let productsData = [];
+let activeSearchQuery = '';
 
 
 
@@ -58,6 +59,8 @@ let currentPage = 1;
 const productsContainer = document.querySelector('.product-list');
 const paginationList = document.querySelector('.page-nav-list');
 const homeTitleElement = document.getElementById("home-title");
+const searchForm = document.querySelector('.form-search');
+const searchInput = document.querySelector('.form-search-input');
 
 function initHeroSlider() {
     const slider = document.querySelector('.hero-slider');
@@ -154,6 +157,106 @@ function renderProducts(productsData) {
     }
 }
 
+function normalizeSearchText(value) {
+    return String(value || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/đ/g, 'd')
+        .trim();
+}
+
+function normalizeExactSearchText(value) {
+    return String(value || '').toLowerCase().trim();
+}
+
+function hasVietnameseAccent(value) {
+    return normalizeExactSearchText(value) !== normalizeSearchText(value);
+}
+
+function parseProductMealTags(value) {
+    if (Array.isArray(value)) return value;
+    if (!value) return [];
+
+    try {
+        const parsed = JSON.parse(value);
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (error) {
+        return String(value).split(',').map((tag) => tag.trim()).filter(Boolean);
+    }
+}
+
+function getCurrentMealPeriod() {
+    const hour = new Date().getHours();
+
+    if (hour >= 5 && hour < 11) {
+        return 'morning';
+    }
+
+    if (hour >= 11 && hour < 16) {
+        return 'lunch';
+    }
+
+    return 'dinner';
+}
+
+function isProductServedNow(product) {
+    const tags = parseProductMealTags(product.meal_tags);
+    return tags.length === 0 || tags.includes(getCurrentMealPeriod());
+}
+
+function getVisibleProducts() {
+    const query = activeSearchQuery;
+    const useExactAccentSearch = hasVietnameseAccent(query);
+    const keyword = useExactAccentSearch
+        ? normalizeExactSearchText(query)
+        : normalizeSearchText(query);
+
+    if (!keyword) {
+        return productsData;
+    }
+
+    return productsData.filter((product) => {
+        const productName = useExactAccentSearch
+            ? normalizeExactSearchText(product.title)
+            : normalizeSearchText(product.title);
+        return productName.includes(keyword) && isProductServedNow(product);
+    });
+}
+
+function scrollToProductList() {
+    const productsSection = document.querySelector('.product-list');
+    if (productsSection) {
+        productsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+
+function renderCurrentProductPage(shouldScroll = false) {
+    const visibleProducts = getVisibleProducts();
+    const totalProducts = visibleProducts.length;
+    const totalPages = Math.ceil(totalProducts / PRODUCTS_PER_PAGE);
+
+    if (currentPage < 1) currentPage = 1;
+    if (totalPages > 0 && currentPage > totalPages) currentPage = totalPages;
+
+    const startIndex = (currentPage - 1) * PRODUCTS_PER_PAGE;
+    const endIndex = startIndex + PRODUCTS_PER_PAGE;
+    const productsToShow = visibleProducts.slice(startIndex, endIndex);
+
+    renderProducts(productsToShow);
+    renderPagination(totalProducts, totalPages);
+
+    if (shouldScroll) {
+        scrollToProductList();
+    }
+}
+
+function applyProductSearch(query, shouldScroll = false) {
+    activeSearchQuery = query;
+    currentPage = 1;
+    renderCurrentProductPage(shouldScroll);
+}
+
 
 function renderPagination(totalProducts, totalPages) {
     if (!paginationList) return;
@@ -187,7 +290,8 @@ function renderPagination(totalProducts, totalPages) {
 }
 
 function changePage(newPage) {
-    const totalProducts = productsData.length; // lấy số lượng ở đây
+    const visibleProducts = getVisibleProducts();
+    const totalProducts = visibleProducts.length; // lấy số lượng ở đây
     const totalPages = Math.ceil(totalProducts / PRODUCTS_PER_PAGE);
 
     if (newPage < 1 || newPage > totalPages) {
@@ -204,7 +308,7 @@ function changePage(newPage) {
     // 2. Tính toán vị trí và lấy dữ liệu
     const startIndex = (currentPage - 1) * PRODUCTS_PER_PAGE;
     const endIndex = startIndex + PRODUCTS_PER_PAGE;
-    const productsToShow = productsData.slice(startIndex, endIndex);
+    const productsToShow = visibleProducts.slice(startIndex, endIndex);
 
     // Render
     renderProducts(productsToShow);
@@ -242,6 +346,17 @@ function openRequestedProductDetail(productId) {
 
 document.addEventListener('DOMContentLoaded', async function () {
     initHeroSlider();
+
+    if (searchForm && searchInput) {
+        searchForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            applyProductSearch(searchInput.value, true);
+        });
+
+        searchInput.addEventListener('input', () => {
+            applyProductSearch(searchInput.value, false);
+        });
+    }
 
     // 🔌 Load products from API
     try {
@@ -556,8 +671,10 @@ function showCategory(categoryName) {
             const filteredProducts = await apiCall('product', 'list', 
                 { category: categoryName, limit: 100 }, 'GET');
             productsData = filteredProducts;
+            activeSearchQuery = '';
+            if (searchInput) searchInput.value = '';
             currentPage = 1; // Reset to first page
-            renderProducts(filteredProducts);
+            renderCurrentProductPage(false);
             
             const productsSection = document.querySelector('.product-list');
             if (productsSection) {
