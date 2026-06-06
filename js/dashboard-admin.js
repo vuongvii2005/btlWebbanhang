@@ -14,6 +14,21 @@ let products = [];
 let orders = [];
 let customers = [];
 let coupons = [];
+let productMealFilter = '';
+
+const mealTagLabels = {
+    morning: 'Sáng',
+    lunch: 'Trưa',
+    dinner: 'Tối'
+};
+
+const PRODUCT_IMAGE_MAX_SIZE = 3 * 1024 * 1024;
+const PRODUCT_IMAGE_ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+const PRODUCT_IMAGE_ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+const PRODUCT_IMAGE_FALLBACK = 'assets/img/vy-food.png';
+const PRODUCT_PRICE_STEP = 1000;
+let selectedProductImageFile = null;
+let productImagePreviewObjectUrl = '';
 
 async function api(controller, action, data = null, method = 'GET') {
     let url = `${API_URL}?controller=${controller}&action=${action}`;
@@ -30,6 +45,8 @@ async function api(controller, action, data = null, method = 'GET') {
         });
         const query = params.toString();
         if (query) url += `&${query}`;
+    } else if (typeof FormData !== 'undefined' && data instanceof FormData) {
+        options.body = data;
     } else if (data) {
         options.body = JSON.stringify(data);
     }
@@ -86,8 +103,12 @@ function setupNavigation() {
             document.querySelectorAll('.content-section').forEach((section) => section.classList.remove('active'));
             button.classList.add('active');
             document.getElementById(button.dataset.section).classList.add('active');
+            document.body.classList.toggle('products-admin-view', button.dataset.section === 'products-section');
         });
     });
+
+    const activeButton = document.querySelector('.nav-link.active');
+    document.body.classList.toggle('products-admin-view', activeButton?.dataset.section === 'products-section');
 }
 
 async function loadDashboard() {
@@ -121,10 +142,21 @@ async function loadCategories() {
 }
 
 function renderCategorySelect() {
-    const select = document.getElementById('productCategory');
-    select.innerHTML = '<option value="">Chọn danh mục</option>' + categories.map((category) => (
+    const formSelect = document.getElementById('productCategory');
+    const filterSelect = document.getElementById('productFilterCategory');
+    const categoryOptions = categories.map((category) => (
         `<option value="${category.id}">${escapeHtml(category.name)}</option>`
     )).join('');
+
+    if (formSelect) {
+        formSelect.innerHTML = '<option value="">Chọn danh mục</option>' + categoryOptions;
+    }
+
+    if (filterSelect) {
+        filterSelect.innerHTML = '<option value="">Tất cả danh mục</option>' + categoryOptions;
+    }
+
+    renderProductStats();
 }
 
 function renderCategories() {
@@ -147,21 +179,41 @@ function renderCategories() {
 async function loadProducts() {
     const result = await api('product', 'admin-list', { limit: 100 });
     products = result.data;
+    renderProductStats();
     renderProducts();
 }
 
 function renderProducts() {
-    document.getElementById('productsTable').innerHTML = products.map((product) => `
+    const visibleProducts = getFilteredProducts();
+    const table = document.getElementById('productsTable');
+    const summary = document.getElementById('productListSummary');
+
+    if (!table) return;
+
+    if (summary) {
+        summary.textContent = `Hiển thị ${visibleProducts.length.toLocaleString('vi-VN')} trong ${products.length.toLocaleString('vi-VN')} món`;
+    }
+
+    if (visibleProducts.length === 0) {
+        table.innerHTML = '<tr><td class="table-empty" colspan="7">Không tìm thấy món ăn phù hợp.</td></tr>';
+        return;
+    }
+
+    table.innerHTML = visibleProducts.map((product) => `
         <tr>
             <td><img class="product-thumb" src="${escapeHtml(product.image_url || '')}" alt="${escapeHtml(product.title)}"></td>
-            <td>${escapeHtml(product.title)}<br><small>${escapeHtml(product.description).slice(0, 90)}</small></td>
+            <td>
+                <strong class="product-name">${escapeHtml(product.title)}</strong>
+                <small class="product-desc">${escapeHtml(product.description || '')}</small>
+            </td>
             <td>${escapeHtml(product.category_name || '')}</td>
             <td>${money.format(product.price)}</td>
-            <td><span class="status-pill ${Number(product.status) === 1 ? 'status-on' : 'status-off'}">${Number(product.status) === 1 ? 'Còn bán' : 'Ngừng bán'}</span></td>
+            <td><span class="status-pill ${Number(product.status) === 1 ? 'status-on' : 'status-off'}">${Number(product.status) === 1 ? 'Đang bán' : 'Tạm ngưng'}</span></td>
+            <td>${renderMealTags(product.meal_tags)}</td>
             <td>
                 <div class="row-actions">
                     <button class="small-btn" onclick="editProduct(${product.id})">Sửa</button>
-                    <button class="small-btn" onclick="toggleProductStatus(${product.id})">${Number(product.status) === 1 ? 'Ngừng bán' : 'Mở bán'}</button>
+                    <button class="small-btn" onclick="toggleProductStatus(${product.id})">${Number(product.status) === 1 ? 'Ẩn' : 'Hiện'}</button>
                     <button class="danger-btn" onclick="deleteProduct(${product.id})">Xóa</button>
                 </div>
             </td>
@@ -217,6 +269,260 @@ function renderCustomers() {
             </td>
         </tr>
     `).join('');
+}
+
+function getFilteredProducts() {
+    const keyword = (document.getElementById('productSearch')?.value || '').trim().toLowerCase();
+    const categoryId = document.getElementById('productFilterCategory')?.value || '';
+    const status = document.getElementById('productFilterStatus')?.value || '';
+
+    return products.filter((product) => {
+        const searchableText = [
+            product.title,
+            product.description,
+            product.category_name
+        ].join(' ').toLowerCase();
+        const productMealTags = parseMealTags(product.meal_tags);
+
+        if (keyword && !searchableText.includes(keyword)) return false;
+        if (categoryId && String(product.category_id) !== String(categoryId)) return false;
+        if (status !== '' && String(product.status) !== status) return false;
+        if (productMealFilter && productMealTags.length > 0 && !productMealTags.includes(productMealFilter)) return false;
+
+        return true;
+    });
+}
+
+function renderProductStats() {
+    const total = products.length;
+    const active = products.filter((product) => Number(product.status) === 1).length;
+    const paused = products.filter((product) => Number(product.status) !== 1).length;
+    const categoryCount = categories.length;
+
+    const stats = {
+        productStatTotal: total,
+        productStatActive: active,
+        productStatPaused: paused,
+        productStatCategories: categoryCount
+    };
+
+    Object.entries(stats).forEach(([id, value]) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = Number(value || 0).toLocaleString('vi-VN');
+    });
+}
+
+function parseProductPrice(value) {
+    const digits = String(value || '').replace(/[^\d]/g, '');
+    return Math.max(0, Number(digits || 0));
+}
+
+function formatProductPrice(value) {
+    const price = parseProductPrice(value);
+    return price > 0 ? price.toLocaleString('vi-VN') : '';
+}
+
+function setProductPrice(value) {
+    const input = document.getElementById('productPrice');
+    if (!input) return;
+    input.value = formatProductPrice(value);
+}
+
+function handleProductPriceInput(event) {
+    event.target.value = formatProductPrice(event.target.value);
+}
+
+function adjustProductPrice(amount) {
+    const input = document.getElementById('productPrice');
+    if (!input) return;
+    const nextPrice = Math.max(0, parseProductPrice(input.value) + amount);
+    input.value = nextPrice > 0 ? nextPrice.toLocaleString('vi-VN') : '';
+}
+
+function handleProductPriceKeydown(event) {
+    if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        adjustProductPrice(PRODUCT_PRICE_STEP);
+    }
+
+    if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        adjustProductPrice(-PRODUCT_PRICE_STEP);
+    }
+}
+
+function parseMealTags(value) {
+    if (Array.isArray(value)) return value;
+    if (!value) return [];
+
+    try {
+        const parsed = JSON.parse(value);
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (error) {
+        return String(value).split(',').map((tag) => tag.trim()).filter(Boolean);
+    }
+}
+
+function getSelectedMealTags() {
+    if (document.getElementById('productMealAllDay')?.checked) {
+        return [];
+    }
+
+    return Array.from(document.querySelectorAll('input[name="productMealTag"]:checked'))
+        .map((input) => input.value);
+}
+
+function setSelectedMealTags(value) {
+    const tags = parseMealTags(value);
+    const selected = new Set(tags);
+    const allDayInput = document.getElementById('productMealAllDay');
+
+    if (allDayInput) {
+        allDayInput.checked = tags.length === 0;
+    }
+
+    document.querySelectorAll('input[name="productMealTag"]').forEach((input) => {
+        input.checked = selected.has(input.value);
+    });
+}
+
+function handleProductMealSelection(event) {
+    const allDayInput = document.getElementById('productMealAllDay');
+    const mealInputs = Array.from(document.querySelectorAll('input[name="productMealTag"]'));
+
+    if (!allDayInput) return;
+
+    if (event.target === allDayInput) {
+        if (allDayInput.checked) {
+            mealInputs.forEach((input) => {
+                input.checked = false;
+            });
+        } else if (!mealInputs.some((input) => input.checked)) {
+            allDayInput.checked = true;
+        }
+
+        return;
+    }
+
+    if (event.target.name === 'productMealTag' && event.target.checked) {
+        allDayInput.checked = false;
+    }
+
+    if (!mealInputs.some((input) => input.checked)) {
+        allDayInput.checked = true;
+    }
+}
+
+function renderMealTags(value) {
+    const tags = parseMealTags(value);
+
+    if (tags.length === 0) {
+        return '<span class="muted-cell">Cả ngày</span>';
+    }
+
+    return tags.map((tag) => (
+        `<span class="meal-tag">${escapeHtml(mealTagLabels[tag] || tag)}</span>`
+    )).join(' ');
+}
+
+function setProductImagePreview(src) {
+    const preview = document.getElementById('productImagePreview');
+    if (!preview) return;
+    preview.src = src || PRODUCT_IMAGE_FALLBACK;
+    document.getElementById('productImageDropzone')?.classList.toggle('has-image', Boolean(src));
+}
+
+function resetSelectedProductImageFile() {
+    selectedProductImageFile = null;
+    const fileInput = document.getElementById('productImageFile');
+    if (fileInput) fileInput.value = '';
+
+    if (productImagePreviewObjectUrl) {
+        URL.revokeObjectURL(productImagePreviewObjectUrl);
+        productImagePreviewObjectUrl = '';
+    }
+}
+
+function isAllowedProductImageFile(file) {
+    const extension = (file.name.split('.').pop() || '').toLowerCase();
+    return PRODUCT_IMAGE_ALLOWED_TYPES.includes(file.type) && PRODUCT_IMAGE_ALLOWED_EXTENSIONS.includes(extension);
+}
+
+function openProductImagePicker() {
+    document.getElementById('productImageFile').click();
+}
+
+function useProductImageFile(file) {
+    if (!file) return;
+
+    if (!isAllowedProductImageFile(file)) {
+        resetSelectedProductImageFile();
+        showAdminError('Ảnh món ăn chỉ hỗ trợ JPG, JPEG, PNG, GIF hoặc WEBP.');
+        return;
+    }
+
+    if (file.size > PRODUCT_IMAGE_MAX_SIZE) {
+        resetSelectedProductImageFile();
+        showAdminError('Ảnh món ăn không được vượt quá 3MB.');
+        return;
+    }
+
+    resetSelectedProductImageFile();
+    selectedProductImageFile = file;
+    productImagePreviewObjectUrl = URL.createObjectURL(file);
+    setProductImagePreview(productImagePreviewObjectUrl);
+    document.getElementById('productImageHint').textContent = `Đã chọn: ${file.name}`;
+}
+
+function handleProductImageSelected(event) {
+    useProductImageFile(event.target.files && event.target.files[0]);
+}
+
+function handleProductImageDrop(event) {
+    event.preventDefault();
+    document.getElementById('productImageDropzone')?.classList.remove('is-dragging');
+    useProductImageFile(event.dataTransfer?.files && event.dataTransfer.files[0]);
+}
+
+function handleProductImageDrag(event) {
+    event.preventDefault();
+    document.getElementById('productImageDropzone')?.classList.add('is-dragging');
+}
+
+function handleProductImageDragLeave(event) {
+    event.preventDefault();
+    document.getElementById('productImageDropzone')?.classList.remove('is-dragging');
+}
+
+function handleProductImageKeydown(event) {
+    if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        openProductImagePicker();
+    }
+}
+
+async function uploadSelectedProductImage() {
+    if (!selectedProductImageFile) {
+        return document.getElementById('productImage').value.trim();
+    }
+
+    const formData = new FormData();
+    formData.append('product_image', selectedProductImageFile);
+
+    const result = await api('product', 'upload-image', formData, 'POST');
+    const imageUrl = result.data?.image_url || '';
+    document.getElementById('productImage').value = imageUrl;
+    resetSelectedProductImageFile();
+    setProductImagePreview(imageUrl);
+    document.getElementById('productImageHint').textContent = 'Ảnh đã được tải lên';
+    return imageUrl;
+}
+
+function updateProductDescriptionCounter() {
+    const description = document.getElementById('productDescription');
+    const counter = document.getElementById('productDescriptionCounter');
+    if (!description || !counter) return;
+    counter.textContent = String(description.value.length);
 }
 
 async function loadCoupons() {
@@ -469,6 +775,13 @@ function resetProductForm() {
     document.getElementById('productForm').reset();
     document.getElementById('productId').value = '';
     document.getElementById('productStatus').value = '1';
+    setProductPrice(0);
+    setSelectedMealTags([]);
+    resetSelectedProductImageFile();
+    document.getElementById('productImage').value = '';
+    document.getElementById('productImageHint').textContent = 'JPG, PNG, WEBP tối đa 3MB';
+    setProductImagePreview('');
+    updateProductDescriptionCounter();
 }
 
 function editProduct(id) {
@@ -476,11 +789,16 @@ function editProduct(id) {
     if (!product) return;
     document.getElementById('productId').value = product.id;
     document.getElementById('productTitle').value = product.title;
-    document.getElementById('productPrice').value = product.price;
+    setProductPrice(product.price);
     document.getElementById('productCategory').value = product.category_id;
     document.getElementById('productImage').value = product.image_url || '';
+    resetSelectedProductImageFile();
+    setProductImagePreview(product.image_url || '');
+    document.getElementById('productImageHint').textContent = product.image_url ? 'Đang dùng ảnh đã lưu' : 'JPG, PNG, WEBP tối đa 3MB';
     document.getElementById('productStatus').value = product.status;
+    setSelectedMealTags(product.meal_tags);
     document.getElementById('productDescription').value = product.description || '';
+    updateProductDescriptionCounter();
     document.getElementById('productTitle').focus();
 }
 
@@ -488,13 +806,15 @@ async function saveProduct(event) {
     event.preventDefault();
     try {
         const id = document.getElementById('productId').value;
+        const imageUrl = await uploadSelectedProductImage();
         const data = {
             id,
             title: document.getElementById('productTitle').value.trim(),
-            price: document.getElementById('productPrice').value,
+            price: parseProductPrice(document.getElementById('productPrice').value),
             category_id: document.getElementById('productCategory').value,
-            image_url: document.getElementById('productImage').value.trim(),
+            image_url: imageUrl,
             status: document.getElementById('productStatus').value,
+            meal_tags: getSelectedMealTags(),
             description: document.getElementById('productDescription').value.trim()
         };
         await api('product', id ? 'update' : 'create', data, 'POST');
@@ -631,6 +951,42 @@ function setupForms() {
     document.getElementById('couponForm').addEventListener('submit', saveCoupon);
     document.getElementById('giftCouponForm').addEventListener('submit', giftCoupon);
     document.getElementById('resetProductBtn').addEventListener('click', resetProductForm);
+    document.getElementById('productImageDropzone').addEventListener('click', openProductImagePicker);
+    document.getElementById('productImageDropzone').addEventListener('keydown', handleProductImageKeydown);
+    document.getElementById('productImageDropzone').addEventListener('dragover', handleProductImageDrag);
+    document.getElementById('productImageDropzone').addEventListener('dragleave', handleProductImageDragLeave);
+    document.getElementById('productImageDropzone').addEventListener('drop', handleProductImageDrop);
+    document.getElementById('productImageFile').addEventListener('change', handleProductImageSelected);
+    document.getElementById('productDescription').addEventListener('input', updateProductDescriptionCounter);
+    document.getElementById('productPrice').addEventListener('input', handleProductPriceInput);
+    document.getElementById('productPrice').addEventListener('keydown', handleProductPriceKeydown);
+    document.getElementById('productPriceDecrease').addEventListener('click', () => adjustProductPrice(-PRODUCT_PRICE_STEP));
+    document.getElementById('productPriceIncrease').addEventListener('click', () => adjustProductPrice(PRODUCT_PRICE_STEP));
+    document.getElementById('productMealAllDay').addEventListener('change', handleProductMealSelection);
+    document.querySelectorAll('input[name="productMealTag"]').forEach((input) => {
+        input.addEventListener('change', handleProductMealSelection);
+    });
+    document.getElementById('productSearch').addEventListener('input', renderProducts);
+    document.getElementById('productFilterCategory').addEventListener('change', renderProducts);
+    document.getElementById('productFilterStatus').addEventListener('change', renderProducts);
+    document.querySelectorAll('.meal-filter-chip').forEach((button) => {
+        button.addEventListener('click', () => {
+            productMealFilter = button.dataset.mealFilter || '';
+            document.querySelectorAll('.meal-filter-chip').forEach((item) => item.classList.remove('active'));
+            button.classList.add('active');
+            renderProducts();
+        });
+    });
+    document.getElementById('resetProductFiltersBtn').addEventListener('click', () => {
+        document.getElementById('productSearch').value = '';
+        document.getElementById('productFilterCategory').value = '';
+        document.getElementById('productFilterStatus').value = '';
+        productMealFilter = '';
+        document.querySelectorAll('.meal-filter-chip').forEach((item) => {
+            item.classList.toggle('active', item.dataset.mealFilter === '');
+        });
+        renderProducts();
+    });
     document.getElementById('resetCategoryBtn').addEventListener('click', resetCategoryForm);
     document.getElementById('resetCouponBtn').addEventListener('click', resetCouponForm);
     document.getElementById('logoutBtn').addEventListener('click', logoutAdmin);

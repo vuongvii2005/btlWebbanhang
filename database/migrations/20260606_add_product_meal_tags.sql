@@ -1,0 +1,2 @@
+ALTER TABLE products
+  ADD COLUMN meal_tags LONGTEXT DEFAULT NULL AFTER status;

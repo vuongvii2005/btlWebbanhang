@@ -100,37 +100,38 @@ class Product {
     }
 
     private function buildMealPrioritySql($mealPeriod) {
-        $text = "CONCAT_WS(' ', p.title, c.name, p.description)";
-
-        $rules = [
-            'morning' => [
-                ['phở', 'pho', 'bún', 'bun', 'hủ tiếu', 'hu tieu', 'xôi', 'xiu mai', 'xíu mại', 'há cảo', 'ha cao'],
-                ['trà', 'tra', 'cà phê', 'ca phe', 'nước ép', 'nuoc ep'],
-                ['cơm', 'com', 'bánh', 'banh']
-            ],
-            'lunch' => [
-                ['cơm', 'com', 'bún', 'bun', 'phở', 'pho', 'hủ tiếu', 'hu tieu', 'món chay', 'mon chay', 'canh', 'rau'],
-                ['cuốn', 'cuon', 'nộm', 'nom', 'gà', 'ga', 'bò', 'bo', 'heo'],
-                ['nước ép', 'nuoc ep', 'trà', 'tra']
-            ],
-            'dinner' => [
-                ['lẩu', 'lau', 'nướng', 'nuong', 'súp', 'sup', 'sushi', 'bít tết', 'bit tet'],
-                ['món mặn', 'mon man', 'hải sản', 'hai san', 'hà cảo', 'ha cao', 'cuộn', 'cuon'],
-                ['chè', 'che', 'bánh', 'banh', 'tráng miệng', 'trang mieng']
-            ]
+        $quotedMealPeriod = $this->pdo->quote('%"' . $mealPeriod . '"%');
+        $hasMealTags = "p.meal_tags IS NOT NULL AND p.meal_tags <> '' AND p.meal_tags <> '[]'";
+        $cases = [
+            "WHEN p.meal_tags LIKE $quotedMealPeriod THEN 3",
+            "WHEN $hasMealTags THEN 2"
         ];
 
-        $groups = $rules[$mealPeriod] ?? $rules['lunch'];
-        $cases = [];
+        return 'CASE ' . implode(' ', $cases) . ' ELSE 1 END';
+    }
 
-        foreach ($groups as $index => $keywords) {
-            $conditions = array_map(function ($keyword) use ($text) {
-                return "$text LIKE " . $this->pdo->quote('%' . $keyword . '%');
-            }, $keywords);
-            $cases[] = 'WHEN ' . implode(' OR ', $conditions) . ' THEN ' . (3 - $index);
+    private function normalizeMealTags($value) {
+        if ($value === null || $value === '') {
+            return null;
         }
 
-        return 'CASE ' . implode(' ', $cases) . ' ELSE 0 END';
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                $value = $decoded;
+            } else {
+                $value = array_map('trim', explode(',', $value));
+            }
+        }
+
+        if (!is_array($value)) {
+            return null;
+        }
+
+        $allowed = ['morning', 'lunch', 'dinner'];
+        $tags = array_values(array_intersect($allowed, array_unique($value)));
+
+        return empty($tags) ? null : json_encode($tags, JSON_UNESCAPED_UNICODE);
     }
 
     /**
@@ -239,8 +240,8 @@ class Product {
         
         try {
             $stmt = $this->pdo->prepare(
-                "INSERT INTO products (category_id, title, description, price, image_url, stock, status, created_at)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, NOW())"
+                "INSERT INTO products (category_id, title, description, price, image_url, stock, status, meal_tags, created_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())"
             );
             
             $stmt->execute([
@@ -250,7 +251,8 @@ class Product {
                 $data['price'],
                 $data['image_url'] ?? null,
                 $data['stock'] ?? 999,
-                isset($data['status']) ? (int)$data['status'] : 1
+                isset($data['status']) ? (int)$data['status'] : 1,
+                $this->normalizeMealTags($data['meal_tags'] ?? null)
             ]);
             
             $productId = $this->pdo->lastInsertId();
@@ -271,7 +273,7 @@ class Product {
      * Cập nhật sản phẩm (Admin)
      */
     public function update($id, $data) {
-        $allowed = ['title', 'description', 'price', 'category_id', 'image_url', 'stock', 'status'];
+        $allowed = ['title', 'description', 'price', 'category_id', 'image_url', 'stock', 'status', 'meal_tags'];
         $updates = [];
         $values = [];
         
@@ -282,7 +284,7 @@ class Product {
                 }
                 
                 $updates[] = "$field = ?";
-                $values[] = $data[$field];
+                $values[] = $field === 'meal_tags' ? $this->normalizeMealTags($data[$field]) : $data[$field];
             }
         }
         

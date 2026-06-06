@@ -21,6 +21,109 @@ require_once __DIR__ . '/../models/Product.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
+function productDetectMimeType($path) {
+    if (function_exists('finfo_open')) {
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mime = finfo_file($finfo, $path);
+        finfo_close($finfo);
+        return $mime;
+    }
+
+    $imageInfo = @getimagesize($path);
+    return $imageInfo['mime'] ?? '';
+}
+
+function productUploadErrorMessage($code) {
+    switch ($code) {
+        case UPLOAD_ERR_INI_SIZE:
+        case UPLOAD_ERR_FORM_SIZE:
+            return 'Ảnh món ăn không được vượt quá 3MB';
+        case UPLOAD_ERR_PARTIAL:
+            return 'Ảnh món ăn chưa được tải lên đầy đủ';
+        case UPLOAD_ERR_NO_TMP_DIR:
+        case UPLOAD_ERR_CANT_WRITE:
+        case UPLOAD_ERR_EXTENSION:
+            return 'Server không thể nhận ảnh món ăn';
+        default:
+            return 'Upload ảnh món ăn thất bại';
+    }
+}
+
+function productValidateImageUpload(&$errors) {
+    if (empty($_FILES['product_image']) || $_FILES['product_image']['error'] === UPLOAD_ERR_NO_FILE) {
+        $errors['product_image'][] = 'Vui lòng chọn ảnh món ăn';
+        return null;
+    }
+
+    $file = $_FILES['product_image'];
+    if (is_array($file['error'])) {
+        $errors['product_image'][] = 'Ảnh món ăn không hợp lệ';
+        return null;
+    }
+
+    if ($file['error'] !== UPLOAD_ERR_OK) {
+        $errors['product_image'][] = productUploadErrorMessage($file['error']);
+        return null;
+    }
+
+    if ((int)$file['size'] > 3 * 1024 * 1024) {
+        $errors['product_image'][] = 'Ảnh món ăn không được vượt quá 3MB';
+        return null;
+    }
+
+    if (!is_uploaded_file($file['tmp_name'])) {
+        $errors['product_image'][] = 'Ảnh món ăn không hợp lệ';
+        return null;
+    }
+
+    $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+    $allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+
+    if (!in_array($extension, $allowedExtensions, true)) {
+        $errors['product_image'][] = 'Ảnh món ăn chỉ hỗ trợ JPG, JPEG, PNG, GIF hoặc WEBP';
+        return null;
+    }
+
+    $mime = productDetectMimeType($file['tmp_name']);
+    if (!in_array($mime, $allowedMimes, true)) {
+        $errors['product_image'][] = 'File tải lên không phải ảnh hợp lệ';
+        return null;
+    }
+
+    return [
+        'tmp_name' => $file['tmp_name'],
+        'extension' => $extension === 'jpeg' ? 'jpg' : $extension
+    ];
+}
+
+function productStoreImageFile($imageFile) {
+    $relativeDir = 'uploads/products';
+    $targetDir = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'products';
+
+    if (!is_dir($targetDir) && !mkdir($targetDir, 0755, true)) {
+        throw new Exception('Không thể tạo thư mục lưu ảnh món ăn');
+    }
+
+    if (!is_writable($targetDir)) {
+        throw new Exception('Thư mục lưu ảnh món ăn không có quyền ghi');
+    }
+
+    $filename = sprintf(
+        'product_%d_%s.%s',
+        time(),
+        bin2hex(random_bytes(6)),
+        $imageFile['extension']
+    );
+    $targetPath = $targetDir . DIRECTORY_SEPARATOR . $filename;
+
+    if (!move_uploaded_file($imageFile['tmp_name'], $targetPath)) {
+        throw new Exception('Không thể lưu ảnh món ăn');
+    }
+
+    return $relativeDir . '/' . $filename;
+}
+
 try {
     $product = new Product($pdo);
     $auth = new Auth($pdo);
@@ -186,6 +289,23 @@ try {
             
             $categories = $product->getCategories();
             Response::success($categories, 'Categories fetched successfully');
+            break;
+
+        case 'upload-image':
+            if ($method !== 'POST') {
+                Response::error('Method not allowed', 405);
+            }
+
+            $auth->requireAdmin();
+            $errors = [];
+            $imageFile = productValidateImageUpload($errors);
+
+            if (!empty($errors)) {
+                Response::error('Ảnh món ăn không hợp lệ', 400, $errors);
+            }
+
+            $imageUrl = productStoreImageFile($imageFile);
+            Response::success(['image_url' => $imageUrl], 'Product image uploaded');
             break;
             
         case 'best-sellers':

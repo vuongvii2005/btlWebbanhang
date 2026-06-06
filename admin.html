@@ -57,33 +57,156 @@
                 </div>
             </section>
 
-            <section id="products-section" class="content-section">
-                <div class="panel">
-                    <div class="panel-header"><h2>Quản lý món ăn</h2></div>
-                    <form id="productForm" class="admin-form">
-                        <input type="hidden" id="productId">
-                        <input type="text" id="productTitle" placeholder="Tên món" required>
-                        <input type="number" id="productPrice" placeholder="Giá" min="1" required>
-                        <select id="productCategory" required></select>
-                        <input type="text" id="productImage" placeholder="Đường dẫn ảnh">
-                        <select id="productStatus">
-                            <option value="1">Còn bán</option>
-                            <option value="0">Ngừng bán</option>
-                        </select>
-                        <textarea id="productDescription" placeholder="Mô tả"></textarea>
-                        <div class="form-actions">
-                            <button type="submit" class="primary-btn">Lưu món ăn</button>
-                            <button type="button" id="resetProductBtn" class="secondary-btn">Làm mới</button>
-                        </div>
-                    </form>
-                    <div class="table-wrap">
-                        <table>
-                            <thead>
-                                <tr><th>Ảnh</th><th>Tên món</th><th>Danh mục</th><th>Giá</th><th>Trạng thái</th><th>Hành động</th></tr>
-                            </thead>
-                            <tbody id="productsTable"></tbody>
-                        </table>
+            <section id="products-section" class="content-section product-management-section">
+                <div class="product-page-header">
+                    <div>
+                        <h1>Quản lý món ăn</h1>
+                        <p>Quản lý và cập nhật các món ăn trong thực đơn</p>
                     </div>
+                    <a href="index.html" class="secondary-btn">Về trang chủ</a>
+                </div>
+
+                <div class="product-stats-grid">
+                    <article class="product-stat-card stat-total">
+                        <span class="product-stat-icon"><i class="fa-light fa-cloche"></i></span>
+                        <div><small>Tổng món</small><strong id="productStatTotal">0</strong><p>Tất cả món ăn</p></div>
+                    </article>
+                    <article class="product-stat-card stat-active">
+                        <span class="product-stat-icon"><i class="fa-light fa-circle-check"></i></span>
+                        <div><small>Đang bán</small><strong id="productStatActive">0</strong><p>Hiển thị trên menu</p></div>
+                    </article>
+                    <article class="product-stat-card stat-paused">
+                        <span class="product-stat-icon"><i class="fa-light fa-circle-pause"></i></span>
+                        <div><small>Tạm ngưng</small><strong id="productStatPaused">0</strong><p>Đang ẩn khỏi menu</p></div>
+                    </article>
+                    <article class="product-stat-card stat-category">
+                        <span class="product-stat-icon"><i class="fa-light fa-layer-group"></i></span>
+                        <div><small>Danh mục</small><strong id="productStatCategories">0</strong><p>Loại món ăn</p></div>
+                    </article>
+                </div>
+
+                <div class="product-workspace">
+                    <div class="product-list-panel">
+                        <div class="product-toolbar">
+                            <label class="product-search-field">
+                                <i class="fa-light fa-magnifying-glass"></i>
+                                <input type="search" id="productSearch" placeholder="Tìm kiếm món ăn...">
+                            </label>
+                            <select id="productFilterCategory">
+                                <option value="">Tất cả danh mục</option>
+                            </select>
+                            <select id="productFilterStatus">
+                                <option value="">Tất cả trạng thái</option>
+                                <option value="1">Đang bán</option>
+                                <option value="0">Tạm ngưng</option>
+                            </select>
+                            <button type="button" id="resetProductFiltersBtn" class="secondary-btn"><i class="fa-light fa-rotate-right"></i> Làm mới</button>
+                        </div>
+
+                        <div class="meal-filter-row" aria-label="Lọc theo buổi phục vụ">
+                            <span>Buổi phục vụ:</span>
+                            <button type="button" class="meal-filter-chip active" data-meal-filter="">Tất cả</button>
+                            <button type="button" class="meal-filter-chip" data-meal-filter="morning"><i class="fa-light fa-sun-bright"></i> Sáng</button>
+                            <button type="button" class="meal-filter-chip" data-meal-filter="lunch"><i class="fa-light fa-sun"></i> Trưa</button>
+                            <button type="button" class="meal-filter-chip" data-meal-filter="dinner"><i class="fa-light fa-moon"></i> Tối</button>
+                        </div>
+
+                        <div class="table-wrap product-table-wrap">
+                            <table class="product-table">
+                                <colgroup>
+                                    <col class="product-col-image">
+                                    <col class="product-col-name">
+                                    <col class="product-col-category">
+                                    <col class="product-col-price">
+                                    <col class="product-col-status">
+                                    <col class="product-col-meal">
+                                    <col class="product-col-actions">
+                                </colgroup>
+                                <thead>
+                                    <tr><th>Ảnh</th><th>Tên món</th><th>Danh mục</th><th>Giá</th><th>Trạng thái</th><th>Buổi</th><th>Hành động</th></tr>
+                                </thead>
+                                <tbody id="productsTable"></tbody>
+                            </table>
+                        </div>
+
+                        <div class="product-list-footer">
+                            <span id="productListSummary">Hiển thị 0 món</span>
+                        </div>
+                    </div>
+
+                    <aside class="product-form-card">
+                        <div class="product-form-heading">
+                            <i class="fa-light fa-basket-shopping"></i>
+                            <h2>Thông tin món ăn</h2>
+                        </div>
+
+                        <form id="productForm" class="product-form">
+                            <input type="hidden" id="productId">
+                            <input type="hidden" id="productImage">
+
+                            <label class="product-field">
+                                <span>Tên món <b>*</b></span>
+                                <input type="text" id="productTitle" placeholder="Nhập tên món ăn" required>
+                            </label>
+
+                            <div class="product-form-row">
+                                <label class="product-field">
+                                    <span>Giá (đ) <b>*</b></span>
+                                    <div class="price-input-group">
+                                        <button type="button" id="productPriceDecrease" class="price-step-btn" aria-label="Giảm giá 1.000đ">-</button>
+                                        <input type="text" id="productPrice" inputmode="numeric" autocomplete="off" placeholder="0" required>
+                                        <button type="button" id="productPriceIncrease" class="price-step-btn" aria-label="Tăng giá 1.000đ">+</button>
+                                    </div>
+                                </label>
+                                <label class="product-field">
+                                    <span>Danh mục <b>*</b></span>
+                                    <select id="productCategory" required></select>
+                                </label>
+                            </div>
+
+                            <label class="product-field">
+                                <span>Ảnh món ăn <b>*</b></span>
+                                <div id="productImageDropzone" class="product-upload-dropzone" role="button" tabindex="0">
+                                    <input type="file" id="productImageFile" name="product_image" accept=".jpg,.jpeg,.png,.gif,.webp,image/jpeg,image/png,image/gif,image/webp" hidden>
+                                    <img id="productImagePreview" class="product-image-preview" src="assets/img/vy-food.png" alt="Ảnh món ăn">
+                                    <div class="product-upload-copy">
+                                        <i class="fa-light fa-arrow-up-from-bracket"></i>
+                                        <strong>Kéo thả ảnh vào đây hoặc bấm để chọn ảnh</strong>
+                                        <small id="productImageHint">JPG, PNG, WEBP tối đa 3MB</small>
+                                    </div>
+                                </div>
+                            </label>
+
+                            <label class="product-field">
+                                <span>Trạng thái <b>*</b></span>
+                                <select id="productStatus">
+                                    <option value="1">Đang bán</option>
+                                    <option value="0">Tạm ngưng</option>
+                                </select>
+                            </label>
+
+                            <div class="product-field">
+                                <span>Buổi phục vụ</span>
+                                <div class="meal-chip-group">
+                                    <label class="meal-checkbox-chip"><input type="checkbox" id="productMealAllDay" checked><span>Cả ngày</span></label>
+                                    <label class="meal-checkbox-chip"><input type="checkbox" name="productMealTag" value="morning"><span>Sáng</span></label>
+                                    <label class="meal-checkbox-chip"><input type="checkbox" name="productMealTag" value="lunch"><span>Trưa</span></label>
+                                    <label class="meal-checkbox-chip"><input type="checkbox" name="productMealTag" value="dinner"><span>Tối</span></label>
+                                </div>
+                            </div>
+
+                            <label class="product-field">
+                                <span>Mô tả món ăn</span>
+                                <textarea id="productDescription" placeholder="Nhập mô tả món ăn..." maxlength="1000"></textarea>
+                                <small class="description-counter"><span id="productDescriptionCounter">0</span>/1000</small>
+                            </label>
+
+                            <div class="product-form-actions">
+                                <button type="submit" class="primary-btn"><i class="fa-light fa-floppy-disk"></i> Lưu</button>
+                                <button type="button" id="resetProductBtn" class="secondary-btn"><i class="fa-light fa-xmark"></i> Hủy</button>
+                            </div>
+                        </form>
+                    </aside>
                 </div>
             </section>
 
