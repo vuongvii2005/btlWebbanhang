@@ -15,28 +15,46 @@ class Product {
      * Lấy danh sách sản phẩm (có phân trang, lọc, tìm kiếm)
      */
     public function getAll($filters = []) {
-        $query = "SELECT * FROM products WHERE status = 1";
+        $mealPrioritySql = $this->buildMealPrioritySql($this->getMealPeriod());
+        $query = "SELECT p.*, c.name AS category_name, COALESCE(s.total_sold, 0) AS total_sold,
+                         $mealPrioritySql AS meal_priority
+                  FROM products p
+                  LEFT JOIN categories c ON p.category_id = c.id
+                  LEFT JOIN (
+                      SELECT oi.product_id, SUM(oi.quantity) AS total_sold
+                      FROM order_items oi
+                      INNER JOIN orders o ON oi.order_id = o.id
+                      WHERE o.status <> 'cancelled'
+                      GROUP BY oi.product_id
+                  ) s ON p.id = s.product_id
+                  WHERE p.status = 1";
         $params = [];
         
         // Filter by category
         if (!empty($filters['category'])) {
-            $query .= " AND category_id = (SELECT id FROM categories WHERE name = ?)";
+            $query .= " AND p.category_id = (SELECT id FROM categories WHERE name = ?)";
             $params[] = $filters['category'];
         }
         
         // Search
         if (!empty($filters['search'])) {
-            $query .= " AND (title LIKE ? OR description LIKE ?)";
+            $query .= " AND (p.title LIKE ? OR p.description LIKE ?)";
             $search = '%' . $filters['search'] . '%';
             $params[] = $search;
             $params[] = $search;
         }
         
         // Sorting
-        $orderBy = 'created_at DESC';
+        $orderBy = 'meal_priority DESC, total_sold DESC, p.created_at DESC';
         if (!empty($filters['sort'])) {
-            $validSorts = ['price_asc' => 'price ASC', 'price_desc' => 'price DESC', 'newest' => 'created_at DESC'];
-            $orderBy = $validSorts[$filters['sort']] ?? 'created_at DESC';
+            $validSorts = [
+                'recommended' => 'meal_priority DESC, total_sold DESC, p.created_at DESC',
+                'best_selling' => 'total_sold DESC, meal_priority DESC, p.created_at DESC',
+                'price_asc' => 'p.price ASC',
+                'price_desc' => 'p.price DESC',
+                'newest' => 'p.created_at DESC'
+            ];
+            $orderBy = $validSorts[$filters['sort']] ?? $orderBy;
         }
         $query .= " ORDER BY $orderBy";
         
@@ -65,6 +83,54 @@ class Product {
         
         $stmt->execute();
         return $stmt->fetchAll();
+    }
+
+    private function getMealPeriod() { // sắp xếp theo bữa ăn (sáng, trưa, tối)
+        $hour = (int)(new DateTime('now', new DateTimeZone('Asia/Ho_Chi_Minh')))->format('G');
+
+        if ($hour >= 5 && $hour < 11) {
+            return 'morning';
+        }
+
+        if ($hour >= 11 && $hour < 16) {
+            return 'lunch';
+        }
+
+        return 'dinner';
+    }
+
+    private function buildMealPrioritySql($mealPeriod) {
+        $text = "CONCAT_WS(' ', p.title, c.name, p.description)";
+
+        $rules = [
+            'morning' => [
+                ['phở', 'pho', 'bún', 'bun', 'hủ tiếu', 'hu tieu', 'xôi', 'xiu mai', 'xíu mại', 'há cảo', 'ha cao'],
+                ['trà', 'tra', 'cà phê', 'ca phe', 'nước ép', 'nuoc ep'],
+                ['cơm', 'com', 'bánh', 'banh']
+            ],
+            'lunch' => [
+                ['cơm', 'com', 'bún', 'bun', 'phở', 'pho', 'hủ tiếu', 'hu tieu', 'món chay', 'mon chay', 'canh', 'rau'],
+                ['cuốn', 'cuon', 'nộm', 'nom', 'gà', 'ga', 'bò', 'bo', 'heo'],
+                ['nước ép', 'nuoc ep', 'trà', 'tra']
+            ],
+            'dinner' => [
+                ['lẩu', 'lau', 'nướng', 'nuong', 'súp', 'sup', 'sushi', 'bít tết', 'bit tet'],
+                ['món mặn', 'mon man', 'hải sản', 'hai san', 'hà cảo', 'ha cao', 'cuộn', 'cuon'],
+                ['chè', 'che', 'bánh', 'banh', 'tráng miệng', 'trang mieng']
+            ]
+        ];
+
+        $groups = $rules[$mealPeriod] ?? $rules['lunch'];
+        $cases = [];
+
+        foreach ($groups as $index => $keywords) {
+            $conditions = array_map(function ($keyword) use ($text) {
+                return "$text LIKE " . $this->pdo->quote('%' . $keyword . '%');
+            }, $keywords);
+            $cases[] = 'WHEN ' . implode(' OR ', $conditions) . ' THEN ' . (3 - $index);
+        }
+
+        return 'CASE ' . implode(' ', $cases) . ' ELSE 0 END';
     }
 
     /**
@@ -306,9 +372,10 @@ class Product {
      */
     public function getBestSellers($limit = 10) {
         $stmt = $this->pdo->prepare(
-            "SELECT p.*, SUM(oi.quantity) as total_sold
+            "SELECT p.*, COALESCE(SUM(CASE WHEN o.id IS NULL THEN 0 ELSE oi.quantity END), 0) as total_sold
              FROM products p
              LEFT JOIN order_items oi ON p.id = oi.product_id
+             LEFT JOIN orders o ON oi.order_id = o.id AND o.status <> 'cancelled'
              WHERE p.status = 1
              GROUP BY p.id
              ORDER BY total_sold DESC
