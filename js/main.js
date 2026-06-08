@@ -607,8 +607,12 @@ function requireCheckoutLogin() {
         return true;
     }
 
-    if (typeof showLoginModal === 'function') showLoginModal();
-    if (typeof disablePageScroll === 'function') disablePageScroll();
+    if (typeof switchToLogin === 'function') {
+        switchToLogin();
+    } else {
+        if (typeof showLoginModal === 'function') showLoginModal();
+        if (typeof disablePageScroll === 'function') disablePageScroll();
+    }
     return false;
 }
 

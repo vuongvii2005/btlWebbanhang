@@ -82,3 +82,7 @@
 {
     "error": "SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.meal_tags' in 'field list'"
 }
+[2026-06-07 13:03:47] Apply coupon failed
+{
+    "error": "\u0110\u01a1n h\u00e0ng c\u1ea7n t\u1ed1i thi\u1ec3u 100.000\u0111 \u0111\u1ec3 d\u00f9ng m\u00e3 n\u00e0y."
+}

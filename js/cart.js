@@ -1,6 +1,16 @@
 let cart = []; // lưu dữ liệu
 
 function addToCart(productId) {
+    if (typeof isLoggedIn === 'function' && !isLoggedIn()) {
+        if (typeof switchToLogin === 'function') {
+            switchToLogin();
+        } else {
+            if (typeof showLoginModal === 'function') showLoginModal();
+            if (typeof disablePageScroll === 'function') disablePageScroll();
+        }
+        return;
+    }
+
     const quantityInput = document.getElementById('quantityInput');
     const noteInput = document.querySelector('.modal-note input'); 
     const quantity = quantityInput ? parseInt(quantityInput.value) : 1;

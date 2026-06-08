@@ -17,8 +17,8 @@ async function checkLogin() {
 
     if (!token) {
         clearAuth();
-        showLoginModal();
-        disablePageScroll();
+        hideLoginModal();
+        enablePageScroll();
         return;
     }
 
@@ -38,8 +38,8 @@ async function checkLogin() {
     } catch (error) {
         if (isAuthError(error)) {
             clearAuth();
-            showLoginModal();
-            disablePageScroll();
+            hideLoginModal();
+            enablePageScroll();
             return;
         }
 
@@ -49,8 +49,8 @@ async function checkLogin() {
             hideLoginModal();
             updateHeaderUI(cachedUser);
         } else {
-            showLoginModal();
-            disablePageScroll();
+            hideLoginModal();
+            enablePageScroll();
         }
         showError(error.message || 'Không thể kiểm tra phiên đăng nhập.');
     }
@@ -208,6 +208,9 @@ async function performRegister(fullname, phone, password, email) {
 
 // ===== SWITCH BETWEEN LOGIN/REGISTER TABS =====
 function switchToLogin() {
+    showLoginModal();
+    disablePageScroll();
+
     const loginTab = document.querySelector('.auth-tab-login');
     const registerTab = document.querySelector('.auth-tab-register');
     const loginForm = document.getElementById('loginForm');
